@@ -209,30 +209,34 @@ const MyLeads: React.FC = () => {
       {/* Search and Filter Bar */}
       <div className="card">
         <div className="card-body">
-          <form onSubmit={handleSearch} className="flex gap-4">
-            <div className="flex-1 relative">
+          <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="md:col-span-2 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 type="text"
                 placeholder="Search your leads..."
-                className="form-input pl-10"
+                className="form-input pl-10 w-full"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as LeadStatus | '')}
-              className="form-input w-48"
-            >
-              <option value="">All Statuses</option>
-              {statusOptions.map(status => (
-                <option key={status} value={status}>{status}</option>
-              ))}
-            </select>
-            <button type="submit" className="btn btn-primary">
-              Search
-            </button>
+            <div>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as LeadStatus | '')}
+                className="form-input w-full"
+              >
+                <option value="">All Statuses</option>
+                {statusOptions.map(status => (
+                  <option key={status} value={status}>{status}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <button type="submit" className="btn btn-primary w-full">
+                Search
+              </button>
+            </div>
           </form>
         </div>
       </div>

@@ -79,6 +79,12 @@ const Analytics: React.FC = () => {
         }
       });
       
+      // Debug logging for recent activity data
+      if (activityResponse.success && activityResponse.data) {
+        console.log('Recent Activity Data:', activityResponse.data);
+        console.log('Sample timestamp:', activityResponse.data[0]?.timestamp);
+      }
+      
     } catch (error) {
       console.error('Failed to fetch analytics');
       toast.error('Failed to load analytics data');
@@ -400,7 +406,12 @@ const Analytics: React.FC = () => {
                         <span className="text-xs text-gray-500">{activity.user}</span>
                         <span className="text-xs text-gray-400">•</span>
                         <span className="text-xs text-gray-500">
-                          {new Date(activity.timestamp).toLocaleString()}
+                          {(() => {
+                            if (!activity.timestamp) return 'Unknown time';
+                            const date = new Date(activity.timestamp);
+                            if (isNaN(date.getTime())) return 'Invalid date';
+                            return date.toLocaleString();
+                          })()}
                         </span>
                       </div>
                     </div>

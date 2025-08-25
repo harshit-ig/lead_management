@@ -189,10 +189,18 @@ export const getRecentActivity = async (req: Request, res: Response): Promise<vo
       .select('name company status updatedAt assignedToUser assignedByUser')
       .lean();
 
+    // Transform lead data into activity format
+    const activities = recentLeads.map(lead => ({
+      type: 'lead_update',
+      description: `Lead "${lead.name}" from ${lead.company} status updated to ${lead.status}`,
+      timestamp: lead.updatedAt,
+      user: lead.assignedToUser?.name || 'System'
+    }));
+
     res.status(200).json({
       success: true,
       message: 'Recent activity retrieved successfully',
-      data: recentLeads
+      data: activities
     });
   } catch (error) {
     console.error('Get recent activity error:', error);

@@ -51,7 +51,7 @@ const AssignLeads: React.FC = () => {
 
   useEffect(() => {
     fetchLeads();
-  }, [searchQuery, statusFilter, sourceFilter, showUnassignedOnly, currentPage]);
+  }, [currentPage]);
 
   const fetchData = async () => {
     await Promise.all([fetchLeads(), fetchUsers()]);
@@ -264,19 +264,19 @@ const AssignLeads: React.FC = () => {
       {/* Filters */}
       <div className="card">
         <div className="card-body">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            fetchLeads();
+          }} className="grid grid-cols-1 md:grid-cols-6 gap-4">
             <div className="md:col-span-2">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
                   type="text"
                   placeholder="Search leads..."
-                  className="form-input pl-10"
+                  className="form-input pl-10 w-full"
                   value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    handleFilterChange();
-                  }}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
             </div>
@@ -284,11 +284,8 @@ const AssignLeads: React.FC = () => {
             <div>
               <select
                 value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value as LeadStatus | '');
-                  handleFilterChange();
-                }}
-                className="form-input"
+                onChange={(e) => setStatusFilter(e.target.value as LeadStatus | '')}
+                className="form-input w-full"
               >
                 <option value="">All Statuses</option>
                 <option value="New">New</option>
@@ -302,11 +299,8 @@ const AssignLeads: React.FC = () => {
             <div>
               <select
                 value={sourceFilter}
-                onChange={(e) => {
-                  setSourceFilter(e.target.value as LeadSource | '');
-                  handleFilterChange();
-                }}
-                className="form-input"
+                onChange={(e) => setSourceFilter(e.target.value as LeadSource | '')}
+                className="form-input w-full"
               >
                 <option value="">All Sources</option>
                 <option value="Website">Website</option>
@@ -322,16 +316,23 @@ const AssignLeads: React.FC = () => {
                 <input
                   type="checkbox"
                   checked={showUnassignedOnly}
-                  onChange={(e) => {
-                    setShowUnassignedOnly(e.target.checked);
-                    handleFilterChange();
-                  }}
+                  onChange={(e) => setShowUnassignedOnly(e.target.checked)}
                   className="mr-2"
                 />
                 <span className="text-sm">Unassigned only</span>
               </label>
             </div>
-          </div>
+
+            <div>
+              <button
+                type="submit"
+                className="btn btn-primary w-full"
+              >
+                <Search className="w-4 h-4" />
+                Search
+              </button>
+            </div>
+          </form>
         </div>
       </div>
 
@@ -354,43 +355,43 @@ const AssignLeads: React.FC = () => {
           </div>
         </div>
 
-        <div className="table-container">
-          <table className="table">
+        <div className="overflow-x-auto">
+          <table className="table w-full min-w-[800px]">
             <thead>
               <tr>
-                <th>
+                <th className="whitespace-nowrap">
                   <input
                     type="checkbox"
                     checked={selectedLeads.length === leads.length && leads.length > 0}
                     onChange={handleSelectAll}
                   />
                 </th>
-                <th>Lead Details</th>
-                <th>Contact Info</th>
-                <th>Company</th>
-                <th>Status</th>
-                <th>Source</th>
-                <th>Priority</th>
-                <th>Current Assignment</th>
+                <th className="whitespace-nowrap">Lead Details</th>
+                <th className="whitespace-nowrap">Contact Info</th>
+                <th className="whitespace-nowrap">Company</th>
+                <th className="whitespace-nowrap">Status</th>
+                <th className="whitespace-nowrap">Source</th>
+                <th className="whitespace-nowrap">Priority</th>
+                <th className="whitespace-nowrap">Current Assignment</th>
               </tr>
             </thead>
             <tbody>
               {leads.map(lead => (
                 <tr key={lead._id} className={selectedLeads.includes(lead._id) ? 'bg-blue-50' : ''}>
-                  <td>
+                  <td className="whitespace-nowrap">
                     <input
                       type="checkbox"
                       checked={selectedLeads.includes(lead._id)}
                       onChange={() => handleSelectLead(lead._id)}
                     />
                   </td>
-                  <td>
+                  <td className="whitespace-nowrap">
                     <div>
                       <div className="font-medium text-gray-900">{lead.name}</div>
                       <div className="text-sm text-gray-500">{lead.position}</div>
                     </div>
                   </td>
-                  <td>
+                  <td className="whitespace-nowrap">
                     <div className="space-y-1">
                       <div className="flex items-center text-sm">
                         <Mail className="w-3 h-3 text-gray-400 mr-1" />
@@ -406,21 +407,21 @@ const AssignLeads: React.FC = () => {
                       </div>
                     </div>
                   </td>
-                  <td>
+                  <td className="whitespace-nowrap">
                     <div className="flex items-center">
                       <Building className="w-4 h-4 text-gray-400 mr-2" />
                       {lead.company}
                     </div>
                   </td>
-                  <td>
+                  <td className="whitespace-nowrap">
                     <span className={`badge ${getStatusColor(lead.status)}`}>
                       {lead.status}
                     </span>
                   </td>
-                  <td>
+                  <td className="whitespace-nowrap">
                     <span className="text-sm text-gray-600">{lead.source}</span>
                   </td>
-                  <td>
+                  <td className="whitespace-nowrap">
                     <span className={`font-medium ${
                       lead.priority === 'High' ? 'text-red-600' :
                       lead.priority === 'Medium' ? 'text-yellow-600' : 'text-green-600'
@@ -428,7 +429,7 @@ const AssignLeads: React.FC = () => {
                       {lead.priority}
                     </span>
                   </td>
-                  <td>
+                  <td className="whitespace-nowrap">
                     {lead.assignedToUser ? (
                       <div className="text-sm">
                         <div className="font-medium">{lead.assignedToUser.name}</div>

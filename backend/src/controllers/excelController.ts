@@ -576,9 +576,6 @@ export const importWithMapping = async (req: Request, res: Response): Promise<vo
       }
     });
 
-    // Clean up uploaded file
-    fs.unlinkSync(filePath);
-
     const result: ExcelUploadResult = {
       success: true,
       message: `Successfully imported ${createdLeads.length} leads`,
@@ -600,6 +597,9 @@ export const importWithMapping = async (req: Request, res: Response): Promise<vo
       message: 'Failed to import leads',
       errors: [error instanceof Error ? error.message : 'Unknown error occurred']
     });
+  } finally {
+    // Clean up uploaded file
+    fs.unlinkSync(req.file?.path || '');
   }
 };
 

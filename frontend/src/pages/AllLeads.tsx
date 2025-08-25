@@ -7,7 +7,6 @@ import {
   Filter,
   Plus,
   Eye,
-  Edit,
   Trash2,
   UserPlus,
   Phone,
@@ -28,6 +27,7 @@ const AllLeads: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalLeads, setTotalLeads] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
+  const [deleteLead, setDeleteLead] = useState<Lead | null>(null);
   const leadsPerPage = 10;
   
   // Filter states
@@ -51,7 +51,7 @@ const AllLeads: React.FC = () => {
 
   useEffect(() => {
     fetchLeads();
-  }, [currentPage, filters, searchQuery]);
+  }, [currentPage, filters]);
 
   const fetchLeads = async () => {
     try {
@@ -114,6 +114,39 @@ const AllLeads: React.FC = () => {
         ? [] 
         : leads.map(lead => lead._id)
     );
+  };
+
+  const handleDeleteLead = async (lead: Lead) => {
+    setDeleteLead(lead);
+  };
+
+  const confirmDeleteLead = async () => {
+    if (!deleteLead) return;
+
+    try {
+      if (deleteLead._id === 'bulk') {
+        // Bulk delete multiple leads
+        const deletePromises = selectedLeads.map(leadId => leadApi.deleteLead(leadId));
+        await Promise.all(deletePromises);
+        
+        toast.success(`${selectedLeads.length} lead${selectedLeads.length > 1 ? 's' : ''} deleted successfully`);
+        setSelectedLeads([]); // Clear selection
+        fetchLeads(); // Refresh the leads list
+        setDeleteLead(null);
+      } else {
+        // Single lead deletion
+        const response = await leadApi.deleteLead(deleteLead._id);
+        if (response.success) {
+          toast.success('Lead deleted successfully');
+          fetchLeads(); // Refresh the leads list
+          setDeleteLead(null);
+        } else {
+          toast.error(response.message || 'Failed to delete lead');
+        }
+      }
+    } catch (error) {
+      toast.error('Failed to delete lead(s)');
+    }
   };
 
   const getStatusColor = (status: LeadStatus): string => {
@@ -185,7 +218,10 @@ const AllLeads: React.FC = () => {
       {/* Search Bar */}
       <div className="card">
         <div className="card-body">
-          <div className="flex gap-4">
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            fetchLeads();
+          }} className="flex gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
@@ -193,13 +229,16 @@ const AllLeads: React.FC = () => {
                 placeholder="Search leads by name, email, company..."
                 className="form-input pl-10"
                 value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1);
-                  setSelectedLeads([]);
-                }}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
+            <button
+              type="submit"
+              className="btn btn-primary"
+            >
+              <Search className="w-4 h-4" />
+              Search
+            </button>
             <button
               type="button"
               onClick={() => {
@@ -211,13 +250,14 @@ const AllLeads: React.FC = () => {
               Clear Filters
             </button>
             <button
+              type="button"
               onClick={fetchLeads}
               className="btn btn-outline"
               title="Refresh"
             >
               <RefreshCw className="w-4 h-4" />
             </button>
-          </div>
+          </form>
         </div>
       </div>
 
@@ -309,10 +349,13 @@ const AllLeads: React.FC = () => {
                 {selectedLeads.length} lead{selectedLeads.length > 1 ? 's' : ''} selected
               </span>
               <div className="flex items-center gap-2">
-                <a href="/leads/assign" className="btn btn-primary btn-sm">
-                  <UserPlus className="w-4 h-4" />
-                  Assign Leads
-                </a>
+                <button
+                  onClick={() => setDeleteLead({ _id: 'bulk', name: `${selectedLeads.length} leads`, company: 'multiple companies' } as Lead)}
+                  className="btn btn-danger btn-sm"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete Selected
+                </button>
               </div>
             </div>
           </div>
@@ -321,51 +364,51 @@ const AllLeads: React.FC = () => {
 
       {/* Leads Table */}
       <div className="card">
-        <div className="table-container">
-          <table className="table">
+        <div className="overflow-x-auto">
+          <table className="table w-full min-w-[1000px]">
             <thead>
               <tr>
-                <th>
+                <th className="whitespace-nowrap">
                   <input
                     type="checkbox"
                     checked={selectedLeads.length === leads.length && leads.length > 0}
                     onChange={handleSelectAll}
                   />
                 </th>
-                <th>Lead Details</th>
-                <th>Company</th>
-                <th>Contact</th>
-                <th>Status</th>
-                <th>Priority</th>
-                <th>Source</th>
-                <th>Assigned To</th>
-                <th>Created</th>
-                <th>Actions</th>
+                <th className="whitespace-nowrap">Lead Details</th>
+                <th className="whitespace-nowrap">Company</th>
+                <th className="whitespace-nowrap">Contact</th>
+                <th className="whitespace-nowrap">Status</th>
+                <th className="whitespace-nowrap">Priority</th>
+                <th className="whitespace-nowrap">Source</th>
+                <th className="whitespace-nowrap">Assigned To</th>
+                <th className="whitespace-nowrap">Created</th>
+                <th className="whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody>
               {leads.map(lead => (
                 <tr key={lead._id}>
-                  <td>
+                  <td className="whitespace-nowrap">
                     <input
                       type="checkbox"
                       checked={selectedLeads.includes(lead._id)}
                       onChange={() => handleSelectLead(lead._id)}
                     />
                   </td>
-                  <td>
+                  <td className="whitespace-nowrap">
                     <div>
                       <div className="font-medium text-gray-900">{lead.name}</div>
                       <div className="text-sm text-gray-500">{lead.position}</div>
                     </div>
                   </td>
-                  <td>
+                  <td className="whitespace-nowrap">
                     <div className="flex items-center">
                       <Building className="w-4 h-4 text-gray-400 mr-2" />
                       {lead.company}
                     </div>
                   </td>
-                  <td>
+                  <td className="whitespace-nowrap">
                     <div className="space-y-1">
                       <div className="flex items-center text-sm">
                         <Mail className="w-3 h-3 text-gray-400 mr-1" />
@@ -377,20 +420,20 @@ const AllLeads: React.FC = () => {
                       </div>
                     </div>
                   </td>
-                  <td>
+                  <td className="whitespace-nowrap">
                     <span className={`badge ${getStatusColor(lead.status)}`}>
                       {lead.status}
                     </span>
                   </td>
-                  <td>
+                  <td className="whitespace-nowrap">
                     <span className={`font-medium ${getPriorityColor(lead.priority)}`}>
                       {lead.priority}
                     </span>
                   </td>
-                  <td>
+                  <td className="whitespace-nowrap">
                     <span className="text-sm text-gray-600">{lead.source}</span>
                   </td>
-                  <td>
+                  <td className="whitespace-nowrap">
                     {lead.assignedToUser ? (
                       <div className="text-sm">
                         <div className="font-medium">{lead.assignedToUser.name}</div>
@@ -400,13 +443,13 @@ const AllLeads: React.FC = () => {
                       <span className="text-gray-400 text-sm">Unassigned</span>
                     )}
                   </td>
-                  <td>
+                  <td className="whitespace-nowrap">
                     <div className="flex items-center text-sm text-gray-500">
                       <Calendar className="w-3 h-3 mr-1" />
                       {new Date(lead.createdAt).toLocaleDateString()}
                     </div>
                   </td>
-                  <td>
+                  <td className="whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       <a
                         href={`/leads/${lead._id}`}
@@ -415,15 +458,10 @@ const AllLeads: React.FC = () => {
                       >
                         <Eye className="w-4 h-4" />
                       </a>
-                      <a
-                        href={`/leads/${lead._id}/edit`}
-                        className="text-green-600 hover:text-green-800"
-                        title="Edit"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </a>
+
                       {user?.role === 'admin' && (
                         <button
+                          onClick={() => handleDeleteLead(lead)}
                           className="text-red-600 hover:text-red-800"
                           title="Delete"
                         >
@@ -508,6 +546,40 @@ const AllLeads: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteLead && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <Trash2 className="w-6 h-6 text-red-500" />
+              <h3 className="text-lg font-semibold text-gray-900">
+                {deleteLead._id === 'bulk' ? 'Delete Multiple Leads' : 'Delete Lead'}
+              </h3>
+            </div>
+            <p className="text-gray-600 mb-6">
+              {deleteLead._id === 'bulk' 
+                ? `Are you sure you want to delete ${selectedLeads.length} selected lead${selectedLeads.length > 1 ? 's' : ''}? This action cannot be undone.`
+                : `Are you sure you want to delete the lead "${deleteLead.name}" from ${deleteLead.company}? This action cannot be undone.`
+              }
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setDeleteLead(null)}
+                className="btn btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteLead}
+                className="btn btn-danger"
+              >
+                {deleteLead._id === 'bulk' ? 'Delete Selected' : 'Delete Lead'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

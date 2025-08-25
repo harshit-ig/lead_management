@@ -285,7 +285,7 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-export const getUserStats = async (req: Request, res: Response): Promise<void> => {
+export const getUserStats = async (_req: Request, res: Response): Promise<void> => {
   try {
     const stats = await (User as any).getUserStats();
 

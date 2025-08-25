@@ -42,7 +42,7 @@ export interface ILead extends Document {
   leadScore?: number;
   createdAt: Date;
   updatedAt: Date;
-  addNote(content: string, createdBy: string): Promise<this>;
+  addNote(content: string, createdBy: mongoose.Types.ObjectId): Promise<this>;
 }
 
 export interface ILeadModel extends mongoose.Model<ILead> {
@@ -53,7 +53,7 @@ export interface ILeadModel extends mongoose.Model<ILead> {
 export interface ILeadNote {
   id: string;
   content: string;
-  createdBy: string;
+  createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
 }
 

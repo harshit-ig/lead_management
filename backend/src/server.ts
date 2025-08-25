@@ -75,7 +75,7 @@ app.get('/health', healthCheck);
 app.use(process.env.API_PREFIX || '/api', routes);
 
 // Temporary route for testing
-app.get('/api/test', (req, res) => {
+app.get('/api/test', (_req, res) => {
   res.json({
     success: true,
     message: 'Lead Manager API is working!',
@@ -86,7 +86,7 @@ app.get('/api/test', (req, res) => {
 });
 
 // Root endpoint
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
   res.json({
     name: 'Lead Manager API',
     version: '1.0.0',
@@ -109,7 +109,7 @@ const gracefulShutdown = (signal: string) => {
   console.log(`📴 Received ${signal}, shutting down gracefully`);
   
   // Close server
-  server.close((err) => {
+  server.close((err: Error | undefined) => {
     if (err) {
       console.error('❌ Error during server close:', err);
       process.exit(1);
@@ -127,7 +127,7 @@ const gracefulShutdown = (signal: string) => {
 };
 
 // Start server
-const startServer = async (): Promise<void> => {
+const startServer = async (): Promise<any> => {
   try {
     // Connect to database
     await connectDatabase();

@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import type { JwtPayload, AuthenticatedRequest } from '../types';
+import type { JwtPayload } from '../types';
 
 // Extend the Request interface to include user
 declare global {
@@ -113,7 +113,7 @@ export const requireAuth = (req: Request, res: Response, next: NextFunction): vo
 };
 
 // Optional authentication - sets user if token is valid but doesn't fail if not
-export const optionalAuth = (req: Request, res: Response, next: NextFunction): void => {
+export const optionalAuth = (req: Request, _res: Response, next: NextFunction): void => {
   try {
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1];

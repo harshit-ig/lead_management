@@ -4,10 +4,10 @@ import { Request, Response, NextFunction } from 'express';
 
 // Configure storage
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
+  destination: (_req, _file, cb) => {
     cb(null, path.join(__dirname, '../../uploads'));
   },
-  filename: (req, file, cb) => {
+  filename: (_req, file, cb) => {
     // Generate unique filename
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const ext = path.extname(file.originalname);
@@ -16,7 +16,7 @@ const storage = multer.diskStorage({
 });
 
 // File filter for Excel files
-const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+const fileFilter = (_req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   const allowedMimeTypes = [
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
     'application/vnd.ms-excel', // .xls
@@ -47,7 +47,7 @@ const upload = multer({
 export const uploadExcel = upload.single('file');
 
 // Error handling middleware for multer
-export const handleUploadError = (err: any, req: Request, res: Response, next: NextFunction): void => {
+export const handleUploadError = (err: any, _req: Request, res: Response, next: NextFunction): void => {
   if (err instanceof multer.MulterError) {
     switch (err.code) {
       case 'LIMIT_FILE_SIZE':

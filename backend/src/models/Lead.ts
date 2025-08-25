@@ -13,7 +13,8 @@ const leadNoteSchema = new Schema<ILeadNote>({
     maxlength: [1000, 'Note cannot exceed 1000 characters']
   },
   createdBy: {
-    type: String,
+    type: Schema.Types.ObjectId,
+    ref: 'User',
     required: true,
   },
   createdAt: {
@@ -271,7 +272,7 @@ leadSchema.statics.getTopPerformers = async function() {
 };
 
 // Instance method to add note
-leadSchema.methods.addNote = function(content: string, createdBy: string) {
+leadSchema.methods.addNote = function(content: string, createdBy: mongoose.Types.ObjectId) {
   this.notes.push({
     id: new mongoose.Types.ObjectId().toString(),
     content,

@@ -442,14 +442,14 @@ const LeadDetails: React.FC = () => {
                   {lead.notes
                     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                     .map((note) => (
-                    <div key={note._id} className="flex gap-3 p-3 bg-white border border-gray-200 rounded-lg">
+                    <div key={note.id} className="flex gap-3 p-3 bg-white border border-gray-200 rounded-lg">
                       <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
                         <MessageSquare className="w-4 h-4 text-gray-600" />
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-sm font-medium text-gray-900">
-                            {note.createdByUser?.name || note.createdBy}
+                            {note.createdBy?.name || 'Unknown User'}
                           </span>
                           <span className="text-xs text-gray-500">
                             {new Date(note.createdAt).toLocaleString()}

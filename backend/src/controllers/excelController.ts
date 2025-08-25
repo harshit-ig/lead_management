@@ -2,10 +2,10 @@ import { Request, Response } from 'express';
 import * as XLSX from 'xlsx';
 import fs from 'fs';
 import path from 'path';
+import mongoose from 'mongoose';
 import Lead from '../models/Lead';
 import type { 
-  ExcelUploadResult, 
-  ExcelLeadRow, 
+  ExcelUploadResult,
   LeadSource, 
   LeadPriority,
   ExcelFileAnalysis,
@@ -13,7 +13,6 @@ import type {
   SheetPreviewData,
   ImportValidationResult,
   FieldMapping,
-  NoteMapping
 } from '../types';
 
 // Valid enum values
@@ -253,7 +252,19 @@ export const getSheetPreview = async (req: Request, res: Response): Promise<void
  */
 export const importWithMapping = async (req: Request, res: Response): Promise<void> => {
   try {
-  const uploadedFile = req.file;
+    // Get system user for import notes
+    const User = mongoose.model('User');
+    const systemUser = await User.findOne({ email: 'system@leadmanager.com' });
+    if (!systemUser) {
+      res.status(500).json({
+        success: false,
+        message: 'System user not found for import operations',
+        errors: ['Please run the seed script to create the system user']
+      });
+      return;
+    }
+    
+    const uploadedFile = req.file;
   
     if (!uploadedFile) {
       res.status(400).json({
@@ -374,6 +385,11 @@ export const importWithMapping = async (req: Request, res: Response): Promise<vo
       const rowErrors: Array<{ field: string; message: string; value: any }> = [];
 
       for (const mapping of fieldMappings) {
+        // Skip notes field as it's handled separately
+        if (mapping.leadField === 'notes') {
+          continue;
+        }
+        
         const columnIndex = columnIndexMap[mapping.excelColumn];
         let value = '';
 
@@ -402,7 +418,7 @@ export const importWithMapping = async (req: Request, res: Response): Promise<vo
       }
 
       // Process notes from the notes field mapping
-      const notes: Array<{ content: string; createdBy: string }> = [];
+      const notes: Array<{ content: string; createdBy: mongoose.Types.ObjectId }> = [];
       const notesMapping = fieldMappings.find(m => m.leadField === 'notes');
       if (notesMapping && notesMapping.excelColumn) {
         const noteColumns = notesMapping.excelColumn.split(',').map(col => col.trim());
@@ -413,17 +429,15 @@ export const importWithMapping = async (req: Request, res: Response): Promise<vo
             if (noteContent && noteContent.trim() !== '') {
               notes.push({
                 content: noteContent.trim(),
-                createdBy: 'System Import'
+                createdBy: systemUser._id
               });
             }
           }
         }
       }
 
-      // Add notes to mapped data if any exist
-      if (notes.length > 0) {
-        mappedData.notes = notes;
-      }
+      // Always set notes to an array (empty if no notes)
+      mappedData.notes = notes;
 
       // Additional validations
       if (mappedData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mappedData.email)) {

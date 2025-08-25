@@ -95,6 +95,7 @@ export const getLeads = async (req: Request, res: Response): Promise<void> => {
       Lead.find(filter)
         .populate('assignedToUser', 'name email')
         .populate('assignedByUser', 'name email')
+        .populate('notes.createdBy', 'name email')
         .sort({ updatedAt: -1 })
         .skip(skip)
         .limit(limitNum)
@@ -234,7 +235,7 @@ export const createLead = async (req: Request, res: Response): Promise<void> => 
       lead.notes.push({
         id: new mongoose.Types.ObjectId().toString(),
         content: leadData.notes,
-        createdBy: req.user?.userId || '',
+        createdBy: new mongoose.Types.ObjectId(req.user?.userId || ''),
         createdAt: new Date()
       });
     }
@@ -537,11 +538,21 @@ export const addNote = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Add note using the model method
-    await lead.addNote(content.trim(), req.user?.userId || '');
+    if (!req.user?.userId) {
+      res.status(400).json({
+        success: false,
+        message: 'User ID is required',
+        errors: ['Please provide a valid user ID']
+      });
+      return;
+    }
+    
+    await lead.addNote(content.trim(), new mongoose.Types.ObjectId(req.user.userId));
 
     // Populate the response
     await lead.populate('assignedToUser', 'name email');
     await lead.populate('assignedByUser', 'name email');
+    await lead.populate('notes.createdBy', 'name email');
 
     res.status(200).json({
       success: true,
@@ -572,6 +583,7 @@ export const getMyLeads = async (req: Request, res: Response): Promise<void> => 
     const [leads, total] = await Promise.all([
       Lead.find(filter)
         .populate('assignedByUser', 'name email')
+        .populate('notes.createdBy', 'name email')
         .sort({ updatedAt: -1 })
         .skip(skip)
         .limit(limitNum)

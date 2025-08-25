@@ -37,44 +37,32 @@ const seedUsers = async () => {
     
     await regularUser.save();
     console.log('✅ Regular user created:', regularUser.email);
-    
-    // Create additional test users
-    const testUsers = [
-      {
-        name: 'John Sales',
-        email: 'john@leadmanager.com',
-        password: 'password123',
-        role: 'user' as const
-      },
-      {
-        name: 'Sarah Manager',
-        email: 'sarah@leadmanager.com',
-        password: 'password123',
-        role: 'admin' as const
-      },
-      {
-        name: 'Mike Agent',
-        email: 'mike@leadmanager.com',
-        password: 'password123',
-        role: 'user' as const
-      }
-    ];
-    
-    for (const userData of testUsers) {
-      const user = new User(userData);
-      await user.save();
-      console.log(`✅ Test user created: ${user.email} (${user.role})`);
-    }
+  
     
     console.log('\n🎉 User seeding completed successfully!');
     console.log('\n📝 Demo Credentials:');
     console.log('Admin: admin@leadmanager.com / admin123456');
     console.log('User:  user@leadmanager.com / user123456');
-    console.log('\n🔗 Additional test users:');
-    testUsers.forEach(user => {
-      console.log(`${user.role}: ${user.email} / ${user.password}`);
-    });
     
+    // Ensure system user exists for import operations
+    const systemUser = await User.findOne({ email: 'system@leadmanager.com' });
+    if (!systemUser) {
+      const systemUserData = {
+        name: 'System Import',
+        email: 'system@leadmanager.com',
+        password: 'systemPassword123!',
+        role: 'admin' as const,
+        isActive: true
+      };
+      
+      const newSystemUser = new User(systemUserData);
+      await newSystemUser.save();
+      console.log('✅ System user created for import operations');
+    } else {
+      console.log('✅ System user already exists');
+    }
+    
+    process.exit(0);
   } catch (error) {
     console.error('❌ Error seeding users:', error);
     process.exit(1);

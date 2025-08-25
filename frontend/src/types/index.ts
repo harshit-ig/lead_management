@@ -51,10 +51,9 @@ export interface Lead {
 }
 
 export interface LeadNote {
-  _id: string;
+  id: string;
   content: string;
-  createdBy: string;
-  createdByUser?: User;
+  createdBy: User;
   createdAt: string;
 }
 

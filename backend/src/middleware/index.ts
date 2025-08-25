@@ -5,9 +5,9 @@ import { CorsOptions } from 'cors';
 // Error handling middleware
 export const errorHandler = (
   error: any,
-  req: Request,
+  _req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ): void => {
   console.error('Error:', error);
 
@@ -188,7 +188,7 @@ export const requestLogger = (req: Request, res: Response, next: NextFunction): 
 // Body parser error handler
 export const bodyParserErrorHandler = (
   error: any,
-  req: Request,
+  _req: Request,
   res: Response,
   next: NextFunction
 ): void => {
@@ -217,7 +217,7 @@ export const validateContentType = (req: Request, res: Response, next: NextFunct
 };
 
 // Security headers middleware (additional to helmet)
-export const securityHeaders = (req: Request, res: Response, next: NextFunction): void => {
+export const securityHeaders = (_req: Request, res: Response, next: NextFunction): void => {
   // Prevent clickjacking
   res.setHeader('X-Frame-Options', 'DENY');
   
@@ -234,7 +234,7 @@ export const securityHeaders = (req: Request, res: Response, next: NextFunction)
 };
 
 // Health check endpoint
-export const healthCheck = (req: Request, res: Response): void => {
+export const healthCheck = (_req: Request, res: Response): void => {
   res.status(200).json({
     success: true,
     message: 'Server is healthy',

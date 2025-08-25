@@ -233,9 +233,13 @@ const MyLeads: React.FC = () => {
               </select>
             </div>
             <div>
-              <button type="submit" className="btn btn-primary w-full">
-                Search
-              </button>
+            <button
+              type="submit"
+              className="btn btn-primary w-full"
+            >
+              <Search className="w-4 h-4" />
+              Search
+            </button>
             </div>
           </form>
         </div>

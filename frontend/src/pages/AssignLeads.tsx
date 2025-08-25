@@ -311,15 +311,15 @@ const AssignLeads: React.FC = () => {
               </select>
             </div>
 
-            <div>
-              <label className="flex items-center">
+            <div className="flex items-center justify-center">
+              <label className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 px-3 py-2 rounded-md transition-colors">
                 <input
                   type="checkbox"
                   checked={showUnassignedOnly}
                   onChange={(e) => setShowUnassignedOnly(e.target.checked)}
-                  className="mr-2"
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                 />
-                <span className="text-sm">Unassigned only</span>
+                <span className="text-sm font-medium text-gray-700">Unassigned only</span>
               </label>
             </div>
 

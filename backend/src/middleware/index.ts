@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import rateLimit from 'express-rate-limit';
 import { CorsOptions } from 'cors';
+import jwt from 'jsonwebtoken';
 
 // Error handling middleware
 export const errorHandler = (
@@ -111,8 +112,45 @@ export const createRateLimiter = (windowMs: number, max: number) => {
     skipSuccessfulRequests: false,
     // Skip failed requests
     skipFailedRequests: false,
+    // Skip rate limiting for logged-in users
+    skip: (req: Request) => {
+      try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+          return false;
+        }
+        
+        const token = authHeader.split(' ')[1];
+        if (!token) {
+          return false;
+        }
+        
+        const secret = process.env.JWT_SECRET;
+        if (!secret) {
+          return false;
+        }
+        
+        // Verify the JWT token
+        const decoded = jwt.verify(token, secret);
+        if (decoded) {
+          // Log when rate limiting is skipped for authenticated users
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`🚀 Rate limiting skipped for authenticated user on ${req.method} ${req.path}`);
+          }
+          return true;
+        }
+        return false;
+      } catch (error) {
+        // If token verification fails, don't skip rate limiting
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`⚠️ Rate limiting applied - invalid token on ${req.method} ${req.path}`);
+        }
+        return false;
+      }
+    },
     // Custom handler for when limit is exceeded
-    handler: (_req: Request, res: Response): void => {
+    handler: (req: Request, res: Response): void => {
+      console.log(`🚫 Rate limit exceeded for ${req.ip} on ${req.method} ${req.path}`);
       res.status(429).json({
         success: false,
         message: 'Too many requests from this IP, please try again later',

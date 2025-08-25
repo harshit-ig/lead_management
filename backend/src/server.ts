@@ -37,7 +37,7 @@ app.use(helmet({
 app.use(cors(corsOptions));
 app.use(securityHeaders);
 
-// Rate limiting
+// Rate limiting - applies to all /api routes but skips authenticated users
 const limiter = createRateLimiter(
   Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
   Number(process.env.RATE_LIMIT_MAX_REQUESTS) || 100 // 100 requests per window

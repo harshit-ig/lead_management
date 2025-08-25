@@ -55,6 +55,18 @@ const cleanPhoneNumber = (phone: string): string => {
   return cleaned.trim();
 };
 
+// Utility function to clean up uploaded files
+const cleanupUploadedFile = (filePath: string | undefined) => {
+  if (filePath) {
+    try {
+      fs.unlinkSync(filePath);
+      console.log('🗑️ Cleaned up uploaded file:', filePath);
+    } catch (error) {
+      console.error('Error deleting uploaded file:', error);
+    }
+  }
+};
+
 // ============================================================================
 // SMART EXCEL IMPORT SYSTEM
 // ============================================================================
@@ -140,6 +152,8 @@ export const analyzeExcelFile = async (req: Request, res: Response): Promise<voi
       message: 'Failed to analyze Excel file',
       errors: [error instanceof Error ? error.message : 'Unknown error occurred']
     });
+  } finally {
+    cleanupUploadedFile(req.file?.path);
   }
 };
 
@@ -244,6 +258,8 @@ export const getSheetPreview = async (req: Request, res: Response): Promise<void
       message: 'Failed to generate sheet preview',
       errors: [error instanceof Error ? error.message : 'Unknown error occurred']
     });
+  } finally {
+    cleanupUploadedFile(req.file?.path);
   }
 };
 
@@ -599,7 +615,7 @@ export const importWithMapping = async (req: Request, res: Response): Promise<vo
     });
   } finally {
     // Clean up uploaded file
-    fs.unlinkSync(req.file?.path || '');
+    cleanupUploadedFile(req.file?.path);
   }
 };
 

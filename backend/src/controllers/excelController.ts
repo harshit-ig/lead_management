@@ -12,7 +12,8 @@ import type {
   ExcelSheetInfo,
   SheetPreviewData,
   ImportValidationResult,
-  FieldMapping
+  FieldMapping,
+  NoteMapping
 } from '../types';
 
 // Valid enum values
@@ -268,6 +269,7 @@ export const importWithMapping = async (req: Request, res: Response): Promise<vo
     const startFromRow = parseInt(req.body.startFromRow, 10) || 2;
     
     let fieldMappings: FieldMapping[];
+    
     try {
       fieldMappings = JSON.parse(req.body.fieldMappings) as FieldMapping[];
     } catch (parseError) {
@@ -397,6 +399,30 @@ export const importWithMapping = async (req: Request, res: Response): Promise<vo
             value: value
           });
         }
+      }
+
+      // Process notes from the notes field mapping
+      const notes: Array<{ content: string; createdBy: string }> = [];
+      const notesMapping = fieldMappings.find(m => m.leadField === 'notes');
+      if (notesMapping && notesMapping.excelColumn) {
+        const noteColumns = notesMapping.excelColumn.split(',').map(col => col.trim());
+        for (const excelColumn of noteColumns) {
+          const columnIndex = columnIndexMap[excelColumn];
+          if (columnIndex !== undefined && rowData[columnIndex] !== undefined) {
+            const noteContent = convertScientificNotation(rowData[columnIndex]);
+            if (noteContent && noteContent.trim() !== '') {
+              notes.push({
+                content: noteContent.trim(),
+                createdBy: 'System Import'
+              });
+            }
+          }
+        }
+      }
+
+      // Add notes to mapped data if any exist
+      if (notes.length > 0) {
+        mappedData.notes = notes;
       }
 
       // Additional validations

@@ -343,6 +343,7 @@ export const leadApi = {
       formData.append('file', file);
       formData.append('sheetName', importRequest.sheetName);
       formData.append('fieldMappings', JSON.stringify(importRequest.fieldMappings));
+
       formData.append('skipEmptyRows', importRequest.skipEmptyRows.toString());
       formData.append('startFromRow', importRequest.startFromRow.toString());
 

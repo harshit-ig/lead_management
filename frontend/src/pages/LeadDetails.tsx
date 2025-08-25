@@ -449,7 +449,7 @@ const LeadDetails: React.FC = () => {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-sm font-medium text-gray-900">
-                            {note.createdByUser?.name || 'User'}
+                            {note.createdByUser?.name || note.createdBy}
                           </span>
                           <span className="text-xs text-gray-500">
                             {new Date(note.createdAt).toLocaleString()}

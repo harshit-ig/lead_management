@@ -15,7 +15,6 @@ const leadNoteSchema = new Schema<ILeadNote>({
   createdBy: {
     type: String,
     required: true,
-    ref: 'User'
   },
   createdAt: {
     type: Date,

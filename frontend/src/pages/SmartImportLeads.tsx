@@ -5,6 +5,7 @@ import type {
   ExcelFileAnalysis, 
   SheetPreviewData, 
   FieldMapping, 
+  NoteMapping,
   LeadFieldDefinition,
   ExcelUploadResponse,
   DynamicImportRequest
@@ -169,6 +170,14 @@ const SmartImportLeads: React.FC = () => {
       }
     });
 
+    // Add notes field as a special type
+    mappings.push({
+      leadField: 'notes',
+      excelColumn: '',
+      isRequired: false,
+      defaultValue: ''
+    });
+
     setFieldMappings(mappings);
   };
 
@@ -206,6 +215,8 @@ const SmartImportLeads: React.FC = () => {
       prev.filter(mapping => mapping.leadField !== leadField)
     );
   };
+
+
 
   // Validate mappings
   const validateMappings = (): boolean => {
@@ -421,108 +432,180 @@ const SmartImportLeads: React.FC = () => {
                       return (
                         <div key={`${mapping.leadField}-${index}`} className="border rounded-lg p-3">
                           <div className="flex items-center gap-3">
-                            {/* Lead Field */}
-                            <div className="flex-1">
-                              <select
-                                value={mapping.leadField}
-                                onChange={(e) => {
-                                  const newMappings = [...fieldMappings];
-                                  const fieldDef = leadFields.find(f => f.name === e.target.value);
-                                  newMappings[index] = {
-                                    ...mapping,
-                                    leadField: e.target.value,
-                                    isRequired: fieldDef?.required || false,
-                                    defaultValue: fieldDef?.defaultValue
-                                  };
-                                  setFieldMappings(newMappings);
-                                }}
-                                className="select select-sm w-full"
-                              >
-                                {leadFields.map(field => (
-                                  <option key={field.name} value={field.name}>
-                                    {field.label} {field.required && '*'}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
+                                                         {/* Lead Field */}
+                             <div className="flex-1">
+                               {mapping.leadField === 'notes' ? (
+                                 <div className="flex items-center h-10 px-3 bg-gray-100 border border-gray-300 rounded-md">
+                                   <span className="text-sm font-medium text-gray-700">Notes (optional)</span>
+                                 </div>
+                               ) : (
+                                 <select
+                                   value={mapping.leadField}
+                                   onChange={(e) => {
+                                     const newMappings = [...fieldMappings];
+                                     const fieldDef = leadFields.find(f => f.name === e.target.value);
+                                     newMappings[index] = {
+                                       ...mapping,
+                                       leadField: e.target.value,
+                                       isRequired: fieldDef?.required || false,
+                                       defaultValue: fieldDef?.defaultValue
+                                     };
+                                     setFieldMappings(newMappings);
+                                   }}
+                                   className="select select-sm w-full"
+                                 >
+                                   {leadFields.map(field => (
+                                     <option key={field.name} value={field.name}>
+                                       {field.label} {field.required && '*'}
+                                     </option>
+                                   ))}
+                                 </select>
+                               )}
+                             </div>
 
                             {/* Arrow */}
                             <ArrowRight className="w-4 h-4 text-gray-400" />
 
-                            {/* Excel Column */}
-                            <div className="flex-1">
-                              <select
-                                value={mapping.excelColumn}
-                                onChange={(e) => updateFieldMapping(mapping.leadField, e.target.value)}
-                                className={`select select-sm w-full ${
-                                  mapping.isRequired && !mapping.excelColumn ? 'border-red-300' : ''
-                                }`}
-                              >
-                                <option value="">Select column...</option>
-                                {sheetPreview.headers.map((header, idx) => (
-                                  <option key={idx} value={header}>
-                                    {header || `Column ${idx + 1}`}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
+                                                         {/* Excel Column */}
+                             <div className="flex-1">
+                               {mapping.leadField === 'notes' ? (
+                                 <div className="space-y-2">
+                                   <div className="flex flex-wrap gap-1">
+                                     {mapping.excelColumn ? mapping.excelColumn.split(',').map((col, idx) => (
+                                       <span key={idx} className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                                         {col.trim()}
+                                         <button
+                                           onClick={() => {
+                                             const columns = mapping.excelColumn.split(',').filter((_, i) => i !== idx);
+                                             updateFieldMapping('notes', columns.join(','));
+                                           }}
+                                           className="text-blue-600 hover:text-blue-800"
+                                         >
+                                           ×
+                                         </button>
+                                       </span>
+                                     )) : null}
+                                   </div>
+                                   <select
+                                     value=""
+                                     onChange={(e) => {
+                                       if (e.target.value) {
+                                         const currentColumns = mapping.excelColumn ? mapping.excelColumn.split(',').filter(c => c.trim()) : [];
+                                         const newColumns = [...currentColumns, e.target.value];
+                                         updateFieldMapping('notes', newColumns.join(','));
+                                       }
+                                     }}
+                                     className="select select-sm w-full border-blue-300"
+                                   >
+                                     <option value="">Add note column...</option>
+                                     {sheetPreview.headers
+                                       .filter(header => !mapping.excelColumn || !mapping.excelColumn.includes(header))
+                                       .map((header, idx) => (
+                                         <option key={idx} value={header}>
+                                           {header || `Column ${idx + 1}`}
+                                         </option>
+                                       ))}
+                                   </select>
+                                 </div>
+                               ) : (
+                                 <select
+                                   value={mapping.excelColumn}
+                                   onChange={(e) => updateFieldMapping(mapping.leadField, e.target.value)}
+                                   className={`select select-sm w-full ${
+                                     mapping.isRequired && !mapping.excelColumn ? 'border-red-300' : ''
+                                   }`}
+                                 >
+                                   <option value="">Select column...</option>
+                                   {sheetPreview.headers.map((header, idx) => (
+                                     <option key={idx} value={header}>
+                                       {header || `Column ${idx + 1}`}
+                                       </option>
+                                     ))}
+                                 </select>
+                               )}
+                             </div>
 
-                            {/* Remove Button */}
-                            {!mapping.isRequired && (
-                              <button
-                                onClick={() => removeFieldMapping(mapping.leadField)}
-                                className="btn btn-sm btn-ghost text-red-500 hover:text-red-700"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            )}
+                                                         {/* Remove Button */}
+                             {!mapping.isRequired && mapping.leadField !== 'notes' && (
+                               <button
+                                 onClick={() => removeFieldMapping(mapping.leadField)}
+                                 className="btn btn-sm btn-ghost text-red-500 hover:text-red-700"
+                               >
+                                 <Trash2 className="w-4 h-4" />
+                               </button>
+                             )}
                           </div>
 
-                          {fieldDef && (
-                            <p className="text-xs text-gray-500 mt-1">{fieldDef.description}</p>
-                          )}
+                                                     {mapping.leadField === 'notes' ? (
+                             <p className="text-xs text-blue-600 mt-1">Select Excel columns that contain note content</p>
+                           ) : fieldDef && (
+                             <p className="text-xs text-gray-500 mt-1">{fieldDef.description}</p>
+                           )}
                         </div>
                       );
                     })}
                   </div>
 
-                  <div className="flex justify-end space-x-3 pt-4 border-t">
-                    <button
-                      onClick={() => validateMappings() && setCurrentStep('preview')}
-                      className="btn btn-primary"
-                    >
-                      <Eye className="w-4 h-4 mr-2" />
-                      Preview Data
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+                                     <div className="flex justify-end space-x-3 pt-4 border-t">
+                     <button
+                       onClick={() => validateMappings() && setCurrentStep('preview')}
+                       className="btn btn-primary"
+                     >
+                       <Eye className="w-4 h-4 mr-2" />
+                       Preview Data
+                     </button>
+                   </div>
+
+                   
+                 </div>
+               )}
+             </div>
+           </div>
+         )}
 
         {/* Preview Step */}
         {currentStep === 'preview' && sheetPreview && (
           <div className="p-6">
-            <h3 className="font-medium text-gray-900 mb-4">Data Preview</h3>
+            <div className="mb-6">
+              <h3 className="font-medium text-gray-900 mb-2">Data Preview</h3>
+              <div className="flex items-center gap-6 text-sm text-gray-600">
+                                 <span>📊 {fieldMappings.filter(m => m.excelColumn).length} fields mapped</span>
+
+                 <span>📋 {sheetPreview.totalRows - 1} rows to import</span>
+              </div>
+            </div>
             
             <div className="overflow-x-auto">
               <table className="table table-zebra w-full">
                 <thead>
                   <tr>
-                    {fieldMappings
-                      .filter(mapping => mapping.excelColumn)
-                      .map(mapping => {
-                        const fieldDef = leadFields.find(f => f.name === mapping.leadField);
-                        return (
-                          <th key={mapping.leadField} className="text-left">
-                            <div>
-                              <p className="font-medium">{fieldDef?.label}</p>
-                              <p className="text-xs text-gray-500">← {mapping.excelColumn}</p>
-                            </div>
-                          </th>
-                        );
-                      })}
+                                          {fieldMappings
+                        .filter(mapping => mapping.excelColumn)
+                        .map(mapping => {
+                          if (mapping.leadField === 'notes') {
+                            return (
+                              <th key={mapping.leadField} className="text-left">
+                                <div>
+                                  <p className="font-medium text-blue-600">Notes</p>
+                                  <p className="text-xs text-gray-500">
+                                    ← {mapping.excelColumn.split(',').map(col => col.trim()).join(', ')}
+                                  </p>
+                                </div>
+                              </th>
+                            );
+                          } else {
+                            const fieldDef = leadFields.find(f => f.name === mapping.leadField);
+                            return (
+                              <th key={mapping.leadField} className="text-left">
+                                <div>
+                                  <p className="font-medium">{fieldDef?.label}</p>
+                                  <p className="text-xs text-gray-500">← {mapping.excelColumn}</p>
+                                </div>
+                              </th>
+                            );
+                          }
+                        })}
+
                   </tr>
                 </thead>
                 <tbody>
@@ -531,14 +614,43 @@ const SmartImportLeads: React.FC = () => {
                       {fieldMappings
                         .filter(mapping => mapping.excelColumn)
                         .map(mapping => {
-                          const columnIndex = sheetPreview.headers.indexOf(mapping.excelColumn);
-                          const value = columnIndex >= 0 ? row[columnIndex] : '';
-                          return (
-                            <td key={mapping.leadField} className="text-sm">
-                              {value || <span className="text-gray-400">—</span>}
-                            </td>
-                          );
+                          if (mapping.leadField === 'notes') {
+                            // Handle notes field specially
+                            const noteColumns = mapping.excelColumn.split(',').map(col => col.trim());
+                            const noteContents: string[] = [];
+                            noteColumns.forEach(column => {
+                              const columnIndex = sheetPreview.headers.indexOf(column);
+                              if (columnIndex >= 0 && row[columnIndex] && String(row[columnIndex]).trim()) {
+                                noteContents.push(String(row[columnIndex]).trim());
+                              }
+                            });
+                            return (
+                              <td key={mapping.leadField} className="text-sm">
+                                {noteContents.length > 0 ? (
+                                  <div className="space-y-1">
+                                    {noteContents.map((content, idx) => (
+                                      <div key={idx} className="text-xs bg-blue-50 p-1 rounded">
+                                        {content}
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-400">—</span>
+                                )}
+                              </td>
+                            );
+                          } else {
+                            // Handle regular fields
+                            const columnIndex = sheetPreview.headers.indexOf(mapping.excelColumn);
+                            const value = columnIndex >= 0 ? row[columnIndex] : '';
+                            return (
+                              <td key={mapping.leadField} className="text-sm">
+                                {value || <span className="text-gray-400">—</span>}
+                              </td>
+                            );
+                          }
                         })}
+
                     </tr>
                   ))}
                 </tbody>

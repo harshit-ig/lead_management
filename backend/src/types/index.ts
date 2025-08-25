@@ -209,6 +209,11 @@ export interface FieldMapping {
   defaultValue?: string;
 }
 
+export interface NoteMapping {
+  excelColumns: string[];
+  isRequired: boolean;
+}
+
 export interface SheetPreviewData {
   headers: string[];
   sampleRows: any[][];
@@ -219,6 +224,7 @@ export interface DynamicImportRequest {
   fileName: string;
   sheetName: string;
   fieldMappings: FieldMapping[];
+  noteMappings: NoteMapping[];
   skipEmptyRows: boolean;
   startFromRow: number;
 }

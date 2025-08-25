@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import User from '../models/User';
 import { generateToken } from '../middleware/auth';
-import type { LoginInput, CreateUserInput, ApiResponse } from '../types';
+import type { LoginInput, CreateUserInput } from '../types';
 
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -55,7 +55,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
     // Generate JWT token
     const token = generateToken({
-      userId: user._id.toString(),
+      userId: (user._id as string).toString(),
       email: user.email,
       role: user.role
     });
@@ -139,7 +139,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     // Generate JWT token
     const token = generateToken({
-      userId: user._id.toString(),
+      userId: (user._id as string).toString(),
       email: user.email,
       role: user.role
     });
@@ -329,7 +329,7 @@ export const changePassword = async (req: Request, res: Response): Promise<void>
   }
 };
 
-export const logout = async (req: Request, res: Response): Promise<void> => {
+export const logout = async (_req: Request, res: Response): Promise<void> => {
   try {
     // In a stateless JWT setup, logout is handled client-side by removing the token
     // However, we can track logout on the server for analytics or audit purposes

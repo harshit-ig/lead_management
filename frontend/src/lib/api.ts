@@ -12,7 +12,11 @@ import type {
   DashboardStats,
   LeadFilters,
   ExcelUploadResponse,
-  CreateUserForm
+  CreateUserForm,
+  ExcelFileAnalysis,
+  SheetPreviewData,
+  DynamicImportRequest,
+  LeadFieldDefinition
 } from '../types';
 
 // Create axios instance with base configuration
@@ -59,7 +63,19 @@ const handleResponse = <T>(response: AxiosResponse<ApiResponse<T>>): ApiResponse
 
 const handleError = (error: any): ApiResponse => {
   if (error.response?.data) {
-    return error.response.data;
+    const errorData = error.response.data;
+    
+    // Handle duplicate errors with better messages
+    if (errorData.message === 'Duplicate lead detected' || 
+        errorData.errors?.some((err: string) => err.includes('already exists'))) {
+      return {
+        ...errorData,
+        message: 'Duplicate lead detected',
+        isDuplicate: true
+      };
+    }
+    
+    return errorData;
   }
   return {
     success: false,
@@ -259,32 +275,6 @@ export const leadApi = {
     }
   },
 
-  importFromExcel: async (file: File): Promise<ExcelUploadResponse> => {
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const response = await api.post('/leads/import/excel', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      return response.data;
-    } catch (error: any) {
-      return {
-        success: false,
-        message: error.response?.data?.message || error.message || 'Failed to import Excel file',
-        data: {
-          totalRows: 0,
-          successfulImports: 0,
-          failedImports: 0,
-          errors: [],
-          leads: []
-        }
-      };
-    }
-  },
-
   getMyLeads: async (page?: number, limit?: number): Promise<PaginatedResponse<Lead>> => {
     try {
       const params = new URLSearchParams();
@@ -303,14 +293,77 @@ export const leadApi = {
     }
   },
 
-  getImportTemplate: async (): Promise<Blob> => {
+  // Smart Excel Import APIs
+  getLeadFields: async (): Promise<ApiResponse<LeadFieldDefinition[]>> => {
     try {
-      const response = await api.get('/leads/import/template', {
-        responseType: 'blob'
+      const response = await api.get('/leads/import/fields');
+      return handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  },
+
+  analyzeExcelFile: async (file: File): Promise<ApiResponse<ExcelFileAnalysis>> => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await api.post('/leads/import/analyze', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  },
+
+  getSheetPreview: async (file: File, sheetName: string, previewRows: number = 5): Promise<ApiResponse<SheetPreviewData>> => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('sheetName', sheetName);
+      formData.append('previewRows', previewRows.toString());
+
+      const response = await api.post('/leads/import/preview', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  },
+
+  importWithMapping: async (file: File, importRequest: Omit<DynamicImportRequest, 'fileName'>): Promise<ExcelUploadResponse> => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('sheetName', importRequest.sheetName);
+      formData.append('fieldMappings', JSON.stringify(importRequest.fieldMappings));
+      formData.append('skipEmptyRows', importRequest.skipEmptyRows.toString());
+      formData.append('startFromRow', importRequest.startFromRow.toString());
+
+      const response = await api.post('/leads/import', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
       return response.data;
-    } catch (error) {
-      throw new Error('Failed to download template');
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message || 'Failed to import Excel file',
+        data: {
+          totalRows: 0,
+          successfulImports: 0,
+          failedImports: 0,
+          errors: [],
+          leads: []
+        }
+      };
     }
   },
 };

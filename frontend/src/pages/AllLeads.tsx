@@ -26,7 +26,9 @@ const AllLeads: React.FC = () => {
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalLeads, setTotalLeads] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
+  const leadsPerPage = 10;
   
   // Filter states
   const [filters, setFilters] = useState<LeadFilters>({
@@ -55,11 +57,14 @@ const AllLeads: React.FC = () => {
     try {
       setLoading(true);
       const searchFilters = searchQuery ? { ...filters, search: searchQuery } : filters;
-      const response = await leadApi.getLeads(searchFilters, currentPage, 10);
+      const response = await leadApi.getLeads(searchFilters, currentPage, leadsPerPage);
       
       if (response.success) {
         setLeads(response.data);
-        setTotalPages(response.pagination.totalPages);
+        if (response.pagination) {
+          setTotalPages(response.pagination.totalPages);
+          setTotalLeads(response.pagination.total);
+        }
       } else {
         toast.error(response.message || 'Failed to fetch leads');
       }
@@ -68,12 +73,6 @@ const AllLeads: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setCurrentPage(1);
-    fetchLeads();
   };
 
   const handleFilterChange = (filterType: keyof LeadFilters, value: any) => {
@@ -86,12 +85,19 @@ const AllLeads: React.FC = () => {
         : [value]
     }));
     setCurrentPage(1);
+    setSelectedLeads([]); // Clear selection when filters change
   };
 
   const clearFilters = () => {
     setFilters({ status: [], source: [], priority: [], assignedTo: [] });
     setSearchQuery('');
     setCurrentPage(1);
+    setSelectedLeads([]); // Clear selection when filters are cleared
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    setSelectedLeads([]); // Clear selection when changing pages
   };
 
   const handleSelectLead = (leadId: string) => {
@@ -154,6 +160,11 @@ const AllLeads: React.FC = () => {
               ? 'Manage all leads in your system' 
               : 'View and manage your assigned leads'
             }
+            {totalLeads > 0 && (
+              <span className="ml-2 text-sm">
+                ({totalLeads} total leads{totalPages > 1 ? `, page ${currentPage} of ${totalPages}` : ''})
+              </span>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -174,7 +185,7 @@ const AllLeads: React.FC = () => {
       {/* Search Bar */}
       <div className="card">
         <div className="card-body">
-          <form onSubmit={handleSearch} className="flex gap-4">
+          <div className="flex gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
@@ -182,12 +193,13 @@ const AllLeads: React.FC = () => {
                 placeholder="Search leads by name, email, company..."
                 className="form-input pl-10"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                  setSelectedLeads([]);
+                }}
               />
             </div>
-            <button type="submit" className="btn btn-primary">
-              Search
-            </button>
             <button
               type="button"
               onClick={() => {
@@ -196,9 +208,16 @@ const AllLeads: React.FC = () => {
               }}
               className="btn btn-secondary"
             >
+              Clear Filters
+            </button>
+            <button
+              onClick={fetchLeads}
+              className="btn btn-outline"
+              title="Refresh"
+            >
               <RefreshCw className="w-4 h-4" />
             </button>
-          </form>
+          </div>
         </div>
       </div>
 
@@ -439,27 +458,52 @@ const AllLeads: React.FC = () => {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="card-footer">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-500">
-                Page {currentPage} of {totalPages}
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                  className="btn btn-secondary btn-sm"
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                  className="btn btn-secondary btn-sm"
-                >
-                  Next
-                </button>
-              </div>
+          <div className="flex items-center justify-between p-4 border-t border-gray-200">
+            <div className="text-sm text-gray-700">
+              Showing <span className="font-medium">{(currentPage - 1) * leadsPerPage + 1}</span> to{' '}
+              <span className="font-medium">
+                {Math.min(currentPage * leadsPerPage, totalLeads)}
+              </span>{' '}
+              of <span className="font-medium">{totalLeads}</span> leads
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="btn btn-sm btn-outline"
+              >
+                Previous
+              </button>
+              
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(page => {
+                  // Show first, last, current, and 2 pages around current
+                  return (
+                    page === 1 ||
+                    page === totalPages ||
+                    (page >= currentPage - 2 && page <= currentPage + 2)
+                  );
+                })
+                .map(page => (
+                  <button
+                    key={page}
+                    onClick={() => handlePageChange(page)}
+                    className={`btn btn-sm ${
+                      currentPage === page ? 'btn-primary' : 'btn-outline'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+              
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="btn btn-sm btn-outline"
+              >
+                Next
+              </button>
             </div>
           </div>
         )}

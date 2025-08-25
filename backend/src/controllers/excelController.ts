@@ -7,117 +7,77 @@ import type {
   ExcelUploadResult, 
   ExcelLeadRow, 
   LeadSource, 
-  LeadPriority 
+  LeadPriority,
+  ExcelFileAnalysis,
+  ExcelSheetInfo,
+  SheetPreviewData,
+  ImportValidationResult,
+  FieldMapping
 } from '../types';
 
 // Valid enum values
 const validSources: LeadSource[] = ['Website', 'Social Media', 'Referral', 'Import', 'Manual', 'Cold Call', 'Email Campaign'];
 const validPriorities: LeadPriority[] = ['High', 'Medium', 'Low'];
 
-// Helper function to validate and normalize lead data
-const validateAndNormalizeLeadRow = (row: ExcelLeadRow, rowIndex: number): { 
-  isValid: boolean; 
-  lead?: any; 
-  errors: Array<{ row: number; field: string; message: string; }>; 
-} => {
-  const errors: Array<{ row: number; field: string; message: string; }> = [];
-  
-  // Required fields validation
-  if (!row.name || typeof row.name !== 'string' || row.name.trim().length === 0) {
-    errors.push({ row: rowIndex, field: 'name', message: 'Name is required' });
+// Utility function to convert scientific notation to regular numbers
+const convertScientificNotation = (value: any): string => {
+  if (typeof value === 'number') {
+    // Convert number to string without scientific notation
+    return value.toLocaleString('fullwide', { useGrouping: false });
   }
   
-  if (!row.email || typeof row.email !== 'string' || row.email.trim().length === 0) {
-    errors.push({ row: rowIndex, field: 'email', message: 'Email is required' });
-  } else {
-    // Email format validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(row.email.trim())) {
-      errors.push({ row: rowIndex, field: 'email', message: 'Invalid email format' });
+  if (typeof value === 'string') {
+    // Check if it's in scientific notation format (e.g., "4.47879E+11")
+    const scientificMatch = value.match(/^([+-]?\d*\.?\d+)[eE]([+-]?\d+)$/);
+    if (scientificMatch) {
+      const number = parseFloat(value);
+      if (!isNaN(number)) {
+        return number.toLocaleString('fullwide', { useGrouping: false });
+      }
     }
   }
   
-  if (!row.phone || typeof row.phone !== 'string' || row.phone.trim().length === 0) {
-    errors.push({ row: rowIndex, field: 'phone', message: 'Phone is required' });
-  }
-  
-  // Company and position are now optional fields
-  // No validation required for these fields
-
-  // Source validation
-  let source: LeadSource = 'Import';
-  if (row.source && typeof row.source === 'string') {
-    const normalizedSource = row.source.trim() as LeadSource;
-    if (validSources.includes(normalizedSource)) {
-      source = normalizedSource;
-    } else {
-      errors.push({ 
-        row: rowIndex, 
-        field: 'source', 
-        message: `Invalid source. Must be one of: ${validSources.join(', ')}` 
-      });
-    }
-  }
-
-  // Priority validation
-  let priority: LeadPriority = 'Medium';
-  if (row.priority && typeof row.priority === 'string') {
-    const normalizedPriority = row.priority.trim() as LeadPriority;
-    if (validPriorities.includes(normalizedPriority)) {
-      priority = normalizedPriority;
-    } else {
-      errors.push({ 
-        row: rowIndex, 
-        field: 'priority', 
-        message: `Invalid priority. Must be one of: ${validPriorities.join(', ')}` 
-      });
-    }
-  }
-
-  if (errors.length > 0) {
-    return { isValid: false, errors };
-  }
-
-  // Create normalized lead object
-  const lead = {
-    name: row.name!.trim(),
-    email: row.email!.trim().toLowerCase(),
-    phone: row.phone!.trim(),
-    company: row.company && typeof row.company === 'string' ? row.company.trim() : '',
-    position: row.position && typeof row.position === 'string' ? row.position.trim() : '',
-    source,
-    priority,
-    status: 'New' as const
-  };
-
-  return { isValid: true, lead, errors: [] };
+  return String(value).trim();
 };
 
-export const importFromExcel = async (req: Request, res: Response): Promise<void> => {
-  const uploadedFile = req.file;
+// Utility function to clean up phone numbers
+const cleanPhoneNumber = (phone: string): string => {
+  if (!phone) return phone;
   
+  // Remove any unwanted characters but keep valid phone number characters
+  let cleaned = phone.replace(/[^\d\+\-\(\)\s\.]/g, '');
+  
+  // If it starts with multiple zeros, likely an international number that lost its +
+  if (cleaned.match(/^00\d/)) {
+    cleaned = '+' + cleaned.substring(2);
+  }
+  
+  return cleaned.trim();
+};
+
+// ============================================================================
+// SMART EXCEL IMPORT SYSTEM
+// ============================================================================
+
+/**
+ * Analyze an uploaded Excel file and return information about all sheets
+ */
+export const analyzeExcelFile = async (req: Request, res: Response): Promise<void> => {
   try {
+    const uploadedFile = req.file;
+
     if (!uploadedFile) {
       res.status(400).json({
         success: false,
-        message: 'No file uploaded',
-        data: {
-          totalRows: 0,
-          successfulImports: 0,
-          failedImports: 0,
-          errors: [],
-          leads: []
-        }
+        message: 'No file uploaded'
       });
       return;
     }
 
     const filePath = uploadedFile.path;
     const fileExtension = path.extname(uploadedFile.originalname).toLowerCase();
-
     let workbook: XLSX.WorkBook;
     
-    // Read the file based on its type
     try {
       if (fileExtension === '.csv') {
         const csvData = fs.readFileSync(filePath, 'utf8');
@@ -126,158 +86,466 @@ export const importFromExcel = async (req: Request, res: Response): Promise<void
         workbook = XLSX.readFile(filePath);
       }
     } catch (fileError) {
-      // Clean up the uploaded file
       fs.unlinkSync(filePath);
-      
       res.status(400).json({
         success: false,
         message: 'Failed to read the uploaded file',
-        errors: ['The file appears to be corrupted or in an unsupported format'],
-        data: {
-          totalRows: 0,
-          successfulImports: 0,
-          failedImports: 0,
-          errors: [],
-          leads: []
-        }
+        errors: ['The file appears to be corrupted or in an unsupported format']
       });
       return;
     }
 
-    // Get the first sheet
-    const sheetName = workbook.SheetNames[0];
-    if (!sheetName) {
-      // Clean up the uploaded file
-      fs.unlinkSync(filePath);
+    const sheets: ExcelSheetInfo[] = [];
+
+    for (const sheetName of workbook.SheetNames) {
+      const worksheet = workbook.Sheets[sheetName];
       
+      // Get range to determine if sheet has data
+      const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:A1');
+      const hasData = range.e.r > 0; // More than just header row
+      
+      // Extract column headers from first row
+      const headers: string[] = [];
+      for (let col = range.s.c; col <= range.e.c; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
+        const cell = worksheet[cellAddress];
+        headers.push(cell ? String(cell.v).trim() : `Column ${col + 1}`);
+      }
+
+      sheets.push({
+        name: sheetName,
+        rowCount: hasData ? range.e.r : 0, // Total rows minus header
+        columnHeaders: headers,
+        hasData
+      });
+    }
+
+    const analysis: ExcelFileAnalysis = {
+      fileName: uploadedFile.originalname,
+      fileSize: uploadedFile.size,
+      sheets,
+      uploadedAt: new Date().toISOString()
+    };
+
+    res.status(200).json({
+      success: true,
+      message: 'File analyzed successfully',
+      data: analysis
+    });
+
+  } catch (error) {
+    console.error('File analysis error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to analyze Excel file',
+      errors: [error instanceof Error ? error.message : 'Unknown error occurred']
+    });
+  }
+};
+
+/**
+ * Get preview data from a specific sheet
+ */
+export const getSheetPreview = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const uploadedFile = req.file;
+    const { sheetName, previewRows = 5 } = req.body;
+
+    if (!uploadedFile) {
       res.status(400).json({
         success: false,
-        message: 'No worksheets found in the file',
-        data: {
-          totalRows: 0,
-          successfulImports: 0,
-          failedImports: 0,
-          errors: [],
-          leads: []
-        }
+        message: 'No file uploaded'
+      });
+      return;
+    }
+
+    if (!sheetName) {
+      res.status(400).json({
+        success: false,
+        message: 'Sheet name is required'
+      });
+      return;
+    }
+
+    const filePath = uploadedFile.path;
+    const fileExtension = path.extname(uploadedFile.originalname).toLowerCase();
+    let workbook: XLSX.WorkBook;
+    
+    try {
+      if (fileExtension === '.csv') {
+        const csvData = fs.readFileSync(filePath, 'utf8');
+        workbook = XLSX.read(csvData, { type: 'string' });
+    } else {
+        workbook = XLSX.readFile(filePath);
+      }
+    } catch (fileError) {
+      fs.unlinkSync(filePath);
+      res.status(400).json({
+        success: false,
+        message: 'Failed to read the uploaded file'
+      });
+      return;
+    }
+
+    if (!workbook.Sheets[sheetName]) {
+      res.status(400).json({
+        success: false,
+        message: `Sheet "${sheetName}" not found in the file`
       });
       return;
     }
 
     const worksheet = workbook.Sheets[sheetName];
     
-    // Convert to JSON
-    const jsonData: ExcelLeadRow[] = XLSX.utils.sheet_to_json(worksheet, {
+    // Convert to array format to get raw data
+    const sheetData = XLSX.utils.sheet_to_json(worksheet, { 
       header: 1,
-      raw: false
-    }).slice(1) // Skip header row
-    .map((row: unknown) => {
-      const rowArray = row as any[];
-      return {
-        name: rowArray[0],
-        email: rowArray[1],
-        phone: rowArray[2],
-        company: rowArray[3],
-        position: rowArray[4],
-        source: rowArray[5],
-        priority: rowArray[6]
-      };
-    })
-    .filter(row => row.name || row.email); // Filter out completely empty rows
+      raw: true, // Keep raw values to avoid scientific notation
+      defval: '' 
+    });
 
-    const totalRows = jsonData.length;
-    const errors: Array<{ row: number; field: string; message: string; }> = [];
+    if (sheetData.length === 0) {
+      res.status(400).json({
+        success: false,
+        message: 'The selected sheet appears to be empty'
+      });
+      return;
+    }
+
+    const headers = sheetData[0] as string[];
+    const dataRows = sheetData.slice(1);
+    const sampleRows = dataRows.slice(0, parseInt(previewRows as string, 10))
+      .map(row => (row as any[]).map((cell, index) => {
+        let converted = convertScientificNotation(cell);
+        // Clean phone numbers if the header suggests it's a phone field
+        const header = headers[index]?.toLowerCase() || '';
+        if (header.includes('phone') || header.includes('contact') || header.includes('mobile')) {
+          converted = cleanPhoneNumber(converted);
+        }
+        return converted;
+      }));
+
+    const previewData: SheetPreviewData = {
+      headers: headers.map(h => String(h).trim()),
+      sampleRows,
+      totalRows: dataRows.length
+    };
+
+    res.status(200).json({
+      success: true,
+      message: 'Sheet preview generated successfully',
+      data: previewData
+    });
+
+  } catch (error) {
+    console.error('Sheet preview error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate sheet preview',
+      errors: [error instanceof Error ? error.message : 'Unknown error occurred']
+    });
+  }
+};
+
+/**
+ * Import leads using smart field mapping
+ */
+export const importWithMapping = async (req: Request, res: Response): Promise<void> => {
+  try {
+  const uploadedFile = req.file;
+  
+    if (!uploadedFile) {
+      res.status(400).json({
+        success: false,
+        message: 'No file uploaded'
+      });
+      return;
+    }
+
+    // Parse form data - fieldMappings comes as JSON string via FormData
+    const sheetName = req.body.sheetName;
+    const skipEmptyRows = req.body.skipEmptyRows === 'true';
+    const startFromRow = parseInt(req.body.startFromRow, 10) || 2;
+    
+    let fieldMappings: FieldMapping[];
+    try {
+      fieldMappings = JSON.parse(req.body.fieldMappings) as FieldMapping[];
+    } catch (parseError) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid field mappings format',
+        errors: ['Field mappings must be valid JSON']
+      });
+      return;
+    }
+
+    if (!sheetName || !fieldMappings || fieldMappings.length === 0) {
+      res.status(400).json({
+        success: false,
+        message: 'Sheet name and field mappings are required'
+      });
+      return;
+    }
+
+    // Validate that required fields are mapped
+    const requiredFields = ['name', 'email', 'phone'];
+    const mappedFields = fieldMappings.map(m => m.leadField);
+    const missingRequired = requiredFields.filter(field => !mappedFields.includes(field));
+
+    if (missingRequired.length > 0) {
+      res.status(400).json({
+        success: false,
+        message: 'Required fields must be mapped',
+        errors: [`Missing mappings for: ${missingRequired.join(', ')}`]
+      });
+      return;
+    }
+
+    const filePath = uploadedFile.path;
+    const fileExtension = path.extname(uploadedFile.originalname).toLowerCase();
+    let workbook: XLSX.WorkBook;
+    
+    try {
+      if (fileExtension === '.csv') {
+        const csvData = fs.readFileSync(filePath, 'utf8');
+        workbook = XLSX.read(csvData, { type: 'string' });
+      } else {
+        workbook = XLSX.readFile(filePath);
+      }
+    } catch (fileError) {
+      fs.unlinkSync(filePath);
+      res.status(400).json({
+        success: false,
+        message: 'Failed to read the uploaded file'
+      });
+      return;
+    }
+
+    if (!workbook.Sheets[sheetName]) {
+      res.status(400).json({
+        success: false,
+        message: `Sheet "${sheetName}" not found`
+      });
+      return;
+    }
+
+    const worksheet = workbook.Sheets[sheetName];
+    const sheetData = XLSX.utils.sheet_to_json(worksheet, { 
+      header: 1,
+      raw: true, // Keep raw values to avoid scientific notation
+      defval: '' 
+    });
+
+    if (sheetData.length < startFromRow) {
+      res.status(400).json({
+        success: false,
+        message: 'Not enough data rows in the sheet'
+      });
+      return;
+    }
+
+    const headers = sheetData[0] as string[];
+    const dataRows = sheetData.slice(startFromRow - 1);
+
+    // Create column index mapping
+    const columnIndexMap: { [key: string]: number } = {};
+    headers.forEach((header, index) => {
+      columnIndexMap[header.trim()] = index;
+    });
+
+    const validationResults: ImportValidationResult[] = [];
     const validLeads: any[] = [];
     const createdLeads: any[] = [];
 
-    // Validate each row
-    for (let i = 0; i < jsonData.length; i++) {
-      const validation = validateAndNormalizeLeadRow(jsonData[i], i + 2); // +2 because Excel rows start at 1 and we skip header
-      
-      if (validation.isValid && validation.lead) {
-        validLeads.push(validation.lead);
-      } else {
-        errors.push(...validation.errors);
+    // Process each row
+    for (let i = 0; i < dataRows.length; i++) {
+      const rowData = dataRows[i] as string[];
+      const rowNumber = startFromRow + i;
+
+      // Skip empty rows if requested
+      if (skipEmptyRows && rowData.every(cell => !cell || String(cell).trim() === '')) {
+        continue;
+      }
+
+      // Map Excel columns to lead fields
+      const mappedData: any = {};
+      const rowErrors: Array<{ field: string; message: string; value: any }> = [];
+
+      for (const mapping of fieldMappings) {
+        const columnIndex = columnIndexMap[mapping.excelColumn];
+        let value = '';
+
+        if (columnIndex !== undefined && rowData[columnIndex] !== undefined) {
+          // Use scientific notation conversion for better data handling
+          value = convertScientificNotation(rowData[columnIndex]);
+          
+          // Apply phone number cleanup for phone fields
+          if (mapping.leadField === 'phone') {
+            value = cleanPhoneNumber(value);
+          }
+        } else if (mapping.defaultValue) {
+          value = mapping.defaultValue;
+        }
+
+        mappedData[mapping.leadField] = value;
+
+        // Validate required fields
+        if (mapping.isRequired && (!value || value === '')) {
+          rowErrors.push({
+            field: mapping.leadField,
+            message: `${mapping.leadField} is required`,
+            value: value
+          });
+        }
+      }
+
+      // Additional validations
+      if (mappedData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mappedData.email)) {
+        rowErrors.push({
+            field: 'email',
+          message: 'Invalid email format',
+          value: mappedData.email
+        });
+      }
+
+      // Validate source and priority if provided
+      if (mappedData.source && !validSources.includes(mappedData.source as LeadSource)) {
+        mappedData.source = 'Import'; // Default fallback
+      }
+
+      if (mappedData.priority && !validPriorities.includes(mappedData.priority as LeadPriority)) {
+        mappedData.priority = 'Medium'; // Default fallback
+      }
+
+      // Set defaults for missing optional fields
+      mappedData.source = mappedData.source || 'Import';
+      mappedData.priority = mappedData.priority || 'Medium';
+      mappedData.status = 'New';
+      mappedData.company = mappedData.company || '';
+      mappedData.position = mappedData.position || '';
+
+      const validationResult: ImportValidationResult = {
+        isValid: rowErrors.length === 0,
+        rowNumber,
+        data: mappedData,
+        errors: rowErrors
+      };
+
+      validationResults.push(validationResult);
+
+      if (validationResult.isValid) {
+        validLeads.push(mappedData);
       }
     }
 
-    // Check for duplicate emails within the file
-    const emailMap = new Map<string, number[]>();
-    validLeads.forEach((lead, index) => {
-      if (!emailMap.has(lead.email)) {
-        emailMap.set(lead.email, []);
-      }
-      emailMap.get(lead.email)!.push(index);
-    });
+    // Create leads in database with duplicate detection
+    const errors: Array<{ row: number; field: string; message: string }> = [];
+    const processedEmails = new Set<string>();
+    const processedPhones = new Set<string>();
 
-    // Mark duplicates within file
-    emailMap.forEach((indices, email) => {
-      if (indices.length > 1) {
-        indices.slice(1).forEach(index => {
-          errors.push({
-            row: index + 2,
-            field: 'email',
-            message: `Duplicate email within file: ${email}`
-          });
-        });
-      }
-    });
-
-    // Remove leads with duplicate emails within file
-    const uniqueValidLeads = validLeads.filter((lead, index) => {
-      const emailIndices = emailMap.get(lead.email) || [];
-      return emailIndices[0] === index; // Keep only the first occurrence
-    });
-
-    // Check for existing leads in database
-    const existingEmails = await Lead.find({
-      email: { $in: uniqueValidLeads.map(lead => lead.email) }
-    }).select('email');
-
-    const existingEmailSet = new Set(existingEmails.map(lead => lead.email));
-
-    // Process valid leads
-    for (const leadData of uniqueValidLeads) {
+    for (const leadData of validLeads) {
       try {
-        // Skip if email already exists in database
-        if (existingEmailSet.has(leadData.email)) {
-          const originalIndex = validLeads.findIndex(l => l.email === leadData.email);
+        const validationError = validationResults.find(vr => vr.data === leadData);
+        const rowNumber = validationError?.rowNumber || 0;
+
+        // Check for duplicates within the current import batch
+        const emailKey = leadData.email.toLowerCase().trim();
+        const phoneKey = leadData.phone.trim();
+        
+        if (processedEmails.has(emailKey)) {
           errors.push({
-            row: originalIndex + 2,
+            row: rowNumber,
             field: 'email',
-            message: `Lead with email ${leadData.email} already exists in database`
+            message: `Duplicate email "${leadData.email}" found within import file`
+          });
+          continue;
+        }
+        
+        if (processedPhones.has(phoneKey)) {
+          errors.push({
+            row: rowNumber,
+            field: 'phone',
+            message: `Duplicate phone "${leadData.phone}" found within import file`
+          });
+          continue;
+        }
+
+        // Check for duplicates in database - check email first, then phone only if email doesn't exist
+        const existingEmail = await Lead.findOne({ email: emailKey });
+        if (existingEmail) {
+          errors.push({
+            row: rowNumber,
+            field: 'email',
+            message: `Lead with email "${leadData.email}" already exists in database`
+          });
+          continue;
+        }
+        
+        // Only check phone if email doesn't exist
+        const existingPhone = await Lead.findOne({ phone: phoneKey });
+        if (existingPhone) {
+          errors.push({
+            row: rowNumber,
+            field: 'phone',
+            message: `Lead with phone "${leadData.phone}" already exists in database`
           });
           continue;
         }
 
         // Create the lead
-        const lead = new Lead({
-          ...leadData,
-          assignedBy: req.user?.userId
-        });
-
-        await lead.save();
-        createdLeads.push(lead);
-      } catch (createError) {
-        const originalIndex = validLeads.findIndex(l => l.email === leadData.email);
+        const lead = new Lead(leadData);
+        const savedLead = await lead.save();
+        createdLeads.push(savedLead);
+        
+        // Track processed emails and phones
+        processedEmails.add(emailKey);
+        processedPhones.add(phoneKey);
+        
+      } catch (error: any) {
+        const validationError = validationResults.find(vr => vr.data === leadData);
+        const rowNumber = validationError?.rowNumber || 0;
+        
+        // Handle MongoDB duplicate key errors
+        const duplicateError = (Lead as any).getDuplicateError(error);
+        if (duplicateError) {
+          errors.push({
+            row: rowNumber,
+            field: 'duplicate',
+            message: duplicateError
+          });
+        } else {
         errors.push({
-          row: originalIndex + 2,
-          field: 'database',
-          message: createError instanceof Error ? createError.message : 'Failed to create lead'
+            row: rowNumber,
+            field: 'general',
+            message: error.message || 'Failed to create lead'
         });
       }
     }
+    }
 
-    // Clean up the uploaded file
+    // Add validation errors to errors array
+    validationResults.forEach(vr => {
+      if (!vr.isValid) {
+        vr.errors.forEach(err => {
+          errors.push({
+            row: vr.rowNumber,
+            field: err.field,
+            message: err.message
+          });
+        });
+      }
+    });
+
+    // Clean up uploaded file
     fs.unlinkSync(filePath);
 
     const result: ExcelUploadResult = {
       success: true,
-      message: `Import completed. ${createdLeads.length} leads imported successfully.`,
+      message: `Successfully imported ${createdLeads.length} leads`,
       data: {
-        totalRows,
+        totalRows: dataRows.length,
         successfulImports: createdLeads.length,
-        failedImports: totalRows - createdLeads.length,
+        failedImports: errors.length,
         errors,
         leads: createdLeads
       }
@@ -286,57 +554,87 @@ export const importFromExcel = async (req: Request, res: Response): Promise<void
     res.status(200).json(result);
 
   } catch (error) {
-    console.error('Excel import error:', error);
-    
-    // Clean up the uploaded file if it exists
-    if (uploadedFile?.path && fs.existsSync(uploadedFile.path)) {
-      fs.unlinkSync(uploadedFile.path);
-    }
-
+    console.error('Dynamic import error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to process Excel file',
-      errors: [error instanceof Error ? error.message : 'Unknown error occurred'],
-      data: {
-        totalRows: 0,
-        successfulImports: 0,
-        failedImports: 0,
-        errors: [],
-        leads: []
-      }
+      message: 'Failed to import leads',
+      errors: [error instanceof Error ? error.message : 'Unknown error occurred']
     });
   }
 };
 
-export const getImportTemplate = async (_req: Request, res: Response): Promise<void> => {
+/**
+ * Get available lead fields for mapping
+ */
+export const getLeadFields = async (_req: Request, res: Response): Promise<void> => {
   try {
-    // Create a sample Excel template
-    const templateData = [
-      ['Name', 'Email', 'Phone', 'Company', 'Position', 'Source', 'Priority'],
-      ['John Doe', 'john.doe@example.com', '+1-555-0123', 'Example Corp', 'Manager', 'Website', 'High'],
-      ['Jane Smith', 'jane.smith@company.com', '+1-555-0124', 'Company Inc', 'Director', 'Social Media', 'Medium']
+    const leadFields = [
+      { 
+        name: 'name', 
+        label: 'Full Name', 
+        type: 'string', 
+        required: true,
+        description: 'Contact\'s full name'
+      },
+      { 
+        name: 'email', 
+        label: 'Email Address', 
+        type: 'email', 
+        required: true,
+        description: 'Valid email address'
+      },
+      { 
+        name: 'phone', 
+        label: 'Phone Number', 
+        type: 'string', 
+        required: true,
+        description: 'Contact phone number'
+      },
+      { 
+        name: 'company', 
+        label: 'Company Name', 
+        type: 'string', 
+        required: false,
+        description: 'Company or organization name'
+      },
+      { 
+        name: 'position', 
+        label: 'Job Title', 
+        type: 'string', 
+        required: false,
+        description: 'Job title or position'
+      },
+      { 
+        name: 'source', 
+        label: 'Lead Source', 
+        type: 'enum', 
+        required: false,
+        options: validSources,
+        defaultValue: 'Import',
+        description: 'How the lead was acquired'
+      },
+      { 
+        name: 'priority', 
+        label: 'Priority Level', 
+        type: 'enum', 
+        required: false,
+        options: validPriorities,
+        defaultValue: 'Medium',
+        description: 'Lead priority level'
+      }
     ];
 
-    // Create workbook and worksheet
-    const workbook = XLSX.utils.book_new();
-    const worksheet = XLSX.utils.aoa_to_sheet(templateData);
+    res.status(200).json({
+      success: true,
+      message: 'Lead fields retrieved successfully',
+      data: leadFields
+    });
 
-    // Add the worksheet to the workbook
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Leads Template');
-
-    // Generate buffer
-    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-
-    // Set headers for file download
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename=leads_import_template.xlsx');
-
-    res.send(buffer);
   } catch (error) {
-    console.error('Template generation error:', error);
+    console.error('Get lead fields error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to generate import template',
+      message: 'Failed to retrieve lead fields',
       errors: [error instanceof Error ? error.message : 'Unknown error occurred']
     });
   }

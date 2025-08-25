@@ -1,4 +1,5 @@
 import { Document } from 'mongoose';
+import * as mongoose from 'mongoose';
 
 // User Types
 export interface IUser extends Document {
@@ -42,6 +43,11 @@ export interface ILead extends Document {
   createdAt: Date;
   updatedAt: Date;
   addNote(content: string, createdBy: string): Promise<this>;
+}
+
+export interface ILeadModel extends mongoose.Model<ILead> {
+  findDuplicates(email: string, phone: string, excludeId?: string): Promise<ILead[]>;
+  getDuplicateError(error: any): string | null;
 }
 
 export interface ILeadNote {
@@ -179,6 +185,53 @@ export interface ExcelLeadRow {
   position?: string;
   source?: string;
   priority?: string;
+}
+
+// Dynamic Excel Import Types
+export interface ExcelSheetInfo {
+  name: string;
+  rowCount: number;
+  columnHeaders: string[];
+  hasData: boolean;
+}
+
+export interface ExcelFileAnalysis {
+  fileName: string;
+  fileSize: number;
+  sheets: ExcelSheetInfo[];
+  uploadedAt: string;
+}
+
+export interface FieldMapping {
+  leadField: string;
+  excelColumn: string;
+  isRequired: boolean;
+  defaultValue?: string;
+}
+
+export interface SheetPreviewData {
+  headers: string[];
+  sampleRows: any[][];
+  totalRows: number;
+}
+
+export interface DynamicImportRequest {
+  fileName: string;
+  sheetName: string;
+  fieldMappings: FieldMapping[];
+  skipEmptyRows: boolean;
+  startFromRow: number;
+}
+
+export interface ImportValidationResult {
+  isValid: boolean;
+  rowNumber: number;
+  data: any;
+  errors: Array<{
+    field: string;
+    message: string;
+    value: any;
+  }>;
 }
 
 // JWT Types

@@ -183,13 +183,42 @@ export const createLead = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    // Check if lead with same email already exists
-    const existingLead = await Lead.findOne({ email: leadData.email });
-    if (existingLead) {
+    // Check for duplicate email first, then phone only if email doesn't exist
+    const existingEmail = await Lead.findOne({ email: leadData.email.toLowerCase().trim() });
+    if (existingEmail) {
       res.status(400).json({
         success: false,
-        message: 'Lead already exists',
-        errors: ['A lead with this email address already exists']
+        message: 'Duplicate lead detected',
+        errors: [`A lead with email "${leadData.email}" already exists`],
+        data: {
+          existingLead: {
+            _id: existingEmail._id,
+            name: existingEmail.name,
+            email: existingEmail.email,
+            phone: existingEmail.phone,
+            company: existingEmail.company
+          }
+        }
+      });
+      return;
+    }
+    
+    // Only check phone if email doesn't exist
+    const existingPhone = await Lead.findOne({ phone: leadData.phone.trim() });
+    if (existingPhone) {
+      res.status(400).json({
+        success: false,
+        message: 'Duplicate lead detected',
+        errors: [`A lead with phone number "${leadData.phone}" already exists`],
+        data: {
+          existingLead: {
+            _id: existingPhone._id,
+            name: existingPhone.name,
+            email: existingPhone.email,
+            phone: existingPhone.phone,
+            company: existingPhone.company
+          }
+        }
       });
       return;
     }
@@ -220,8 +249,20 @@ export const createLead = async (req: Request, res: Response): Promise<void> => 
       message: 'Lead created successfully',
       data: lead
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create lead error:', error);
+    
+    // Handle MongoDB duplicate key errors
+    const duplicateError = (Lead as any).getDuplicateError(error);
+    if (duplicateError) {
+      res.status(400).json({
+        success: false,
+        message: 'Duplicate lead detected',
+        errors: [duplicateError]
+      });
+      return;
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Failed to create lead',
@@ -253,6 +294,55 @@ export const updateLead = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
+    // Check for duplicates if email or phone is being updated
+    if (updateData.email) {
+      const existingEmail = await Lead.findOne({ 
+        email: updateData.email.toLowerCase().trim(),
+        _id: { $ne: id }
+      });
+      if (existingEmail) {
+        res.status(400).json({
+          success: false,
+          message: 'Duplicate lead detected',
+          errors: [`A lead with email "${updateData.email}" already exists`],
+          data: {
+            existingLead: {
+              _id: existingEmail._id,
+              name: existingEmail.name,
+              email: existingEmail.email,
+              phone: existingEmail.phone,
+              company: existingEmail.company
+            }
+          }
+        });
+        return;
+      }
+    }
+    
+    if (updateData.phone) {
+      const existingPhone = await Lead.findOne({ 
+        phone: updateData.phone.trim(),
+        _id: { $ne: id }
+      });
+      if (existingPhone) {
+        res.status(400).json({
+          success: false,
+          message: 'Duplicate lead detected',
+          errors: [`A lead with phone number "${updateData.phone}" already exists`],
+          data: {
+            existingLead: {
+              _id: existingPhone._id,
+              name: existingPhone.name,
+              email: existingPhone.email,
+              phone: existingPhone.phone,
+              company: existingPhone.company
+            }
+          }
+        });
+        return;
+      }
+    }
+
     // Update allowed fields
     const allowedFields = ['name', 'email', 'phone', 'company', 'position', 'source', 'status', 'priority'];
     allowedFields.forEach(field => {
@@ -272,8 +362,20 @@ export const updateLead = async (req: Request, res: Response): Promise<void> => 
       message: 'Lead updated successfully',
       data: lead
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update lead error:', error);
+    
+    // Handle MongoDB duplicate key errors
+    const duplicateError = (Lead as any).getDuplicateError(error);
+    if (duplicateError) {
+      res.status(400).json({
+        success: false,
+        message: 'Duplicate lead detected',
+        errors: [duplicateError]
+      });
+      return;
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Failed to update lead',

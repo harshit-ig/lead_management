@@ -8,7 +8,7 @@ import Dashboard from './pages/Dashboard';
 import AllLeads from './pages/AllLeads';
 import MyLeads from './pages/MyLeads';
 import AddLead from './pages/AddLead';
-import ImportLeads from './pages/ImportLeads';
+import SmartImportLeads from './pages/SmartImportLeads';
 import AssignLeads from './pages/AssignLeads';
 import LeadDetails from './pages/LeadDetails';
 import UserManagement from './pages/UserManagement';
@@ -125,7 +125,18 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute>
             <Layout>
-              <ImportLeads />
+              <SmartImportLeads />
+            </Layout>
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
+        path="/leads/import/smart" 
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <SmartImportLeads />
             </Layout>
           </ProtectedRoute>
         } 

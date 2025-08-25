@@ -10,6 +10,8 @@
     "seed:users": "tsx src/scripts/seedUsers.ts",
     "seed:leads": "tsx src/scripts/seedLeads.ts",
     "seed:all": "npm run seed:users && npm run seed:leads",
+    "find-duplicates": "tsx src/scripts/findDuplicates.ts",
+    "create-indexes": "tsx src/scripts/createIndexes.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [

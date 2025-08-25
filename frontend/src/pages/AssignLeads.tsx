@@ -26,6 +26,12 @@ const AssignLeads: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<LeadStatus | ''>('');
   const [sourceFilter, setSourceFilter] = useState<LeadSource | ''>('');
   const [showUnassignedOnly, setShowUnassignedOnly] = useState(true);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalLeads, setTotalLeads] = useState(0);
+  const leadsPerPage = 10;
 
   // Redirect if not admin
   if (user?.role !== 'admin') {
@@ -45,7 +51,7 @@ const AssignLeads: React.FC = () => {
 
   useEffect(() => {
     fetchLeads();
-  }, [searchQuery, statusFilter, sourceFilter, showUnassignedOnly]);
+  }, [searchQuery, statusFilter, sourceFilter, showUnassignedOnly, currentPage]);
 
   const fetchData = async () => {
     await Promise.all([fetchLeads(), fetchUsers()]);
@@ -61,10 +67,14 @@ const AssignLeads: React.FC = () => {
       if (searchQuery) filters.search = searchQuery;
       if (showUnassignedOnly) filters.assignedTo = [null];
 
-      const response = await leadApi.getLeads(filters, 1, 100); // Get more leads for assignment
+      const response = await leadApi.getLeads(filters, currentPage, leadsPerPage);
       
       if (response.success) {
         setLeads(response.data);
+        if (response.pagination) {
+          setTotalPages(response.pagination.totalPages);
+          setTotalLeads(response.pagination.total);
+        }
       } else {
         toast.error('Failed to fetch leads');
       }
@@ -102,6 +112,16 @@ const AssignLeads: React.FC = () => {
         ? [] 
         : leads.map(lead => lead._id)
     );
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    setSelectedLeads([]); // Clear selection when changing pages
+  };
+
+  const handleFilterChange = () => {
+    setCurrentPage(1); // Reset to first page when filters change
+    setSelectedLeads([]); // Clear selection when filters change
   };
 
   const handleAssignLeads = async () => {
@@ -172,7 +192,14 @@ const AssignLeads: React.FC = () => {
         </a>
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Assign Leads</h1>
-          <p className="text-gray-600 mt-2">Assign leads to team members for follow-up</p>
+          <p className="text-gray-600 mt-2">
+            Assign leads to team members for follow-up
+            {totalLeads > 0 && (
+              <span className="ml-2 text-sm">
+                ({totalLeads} total leads{totalPages > 1 ? `, page ${currentPage} of ${totalPages}` : ''})
+              </span>
+            )}
+          </p>
         </div>
       </div>
 
@@ -246,7 +273,10 @@ const AssignLeads: React.FC = () => {
                   placeholder="Search leads..."
                   className="form-input pl-10"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    handleFilterChange();
+                  }}
                 />
               </div>
             </div>
@@ -254,7 +284,10 @@ const AssignLeads: React.FC = () => {
             <div>
               <select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as LeadStatus | '')}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value as LeadStatus | '');
+                  handleFilterChange();
+                }}
                 className="form-input"
               >
                 <option value="">All Statuses</option>
@@ -269,7 +302,10 @@ const AssignLeads: React.FC = () => {
             <div>
               <select
                 value={sourceFilter}
-                onChange={(e) => setSourceFilter(e.target.value as LeadSource | '')}
+                onChange={(e) => {
+                  setSourceFilter(e.target.value as LeadSource | '');
+                  handleFilterChange();
+                }}
                 className="form-input"
               >
                 <option value="">All Sources</option>
@@ -286,7 +322,10 @@ const AssignLeads: React.FC = () => {
                 <input
                   type="checkbox"
                   checked={showUnassignedOnly}
-                  onChange={(e) => setShowUnassignedOnly(e.target.checked)}
+                  onChange={(e) => {
+                    setShowUnassignedOnly(e.target.checked);
+                    handleFilterChange();
+                  }}
                   className="mr-2"
                 />
                 <span className="text-sm">Unassigned only</span>
@@ -405,6 +444,58 @@ const AssignLeads: React.FC = () => {
           </table>
         </div>
 
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between p-4 border-t border-gray-200">
+            <div className="text-sm text-gray-700">
+              Showing <span className="font-medium">{(currentPage - 1) * leadsPerPage + 1}</span> to{' '}
+              <span className="font-medium">
+                {Math.min(currentPage * leadsPerPage, totalLeads)}
+              </span>{' '}
+              of <span className="font-medium">{totalLeads}</span> leads
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="btn btn-sm btn-outline"
+              >
+                Previous
+              </button>
+              
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(page => {
+                  // Show first, last, current, and 2 pages around current
+                  return (
+                    page === 1 ||
+                    page === totalPages ||
+                    (page >= currentPage - 2 && page <= currentPage + 2)
+                  );
+                })
+                .map(page => (
+                  <button
+                    key={page}
+                    onClick={() => handlePageChange(page)}
+                    className={`btn btn-sm ${
+                      currentPage === page ? 'btn-primary' : 'btn-outline'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+              
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="btn btn-sm btn-outline"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Empty State */}
         {leads.length === 0 && (
           <div className="text-center py-12">
@@ -423,6 +514,7 @@ const AssignLeads: React.FC = () => {
                   setStatusFilter('');
                   setSourceFilter('');
                   setShowUnassignedOnly(false);
+                  handleFilterChange();
                 }}
                 className="btn btn-secondary"
               >

@@ -36,6 +36,7 @@ const leadSchema = new Schema<ILead>({
     required: [true, 'Email is required'],
     trim: true,
     lowercase: true,
+    unique: true,
     match: [
       /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
       'Please enter a valid email address'
@@ -45,8 +46,9 @@ const leadSchema = new Schema<ILead>({
     type: String,
     required: [true, 'Phone is required'],
     trim: true,
+    unique: true,
     match: [
-      /^[\+]?[\d\s\-\(\)]{7,20}$/,
+      /^[\+]?[\d\s\-\(\)\.]{7,25}$/,
       'Please enter a valid phone number'
     ]
   },
@@ -300,6 +302,42 @@ leadSchema.pre('save', function(next) {
   }
   next();
 });
+
+// Create indexes for better performance and uniqueness
+leadSchema.index({ email: 1 }, { unique: true });
+leadSchema.index({ phone: 1 }, { unique: true });
+
+// Static method to check for duplicates
+leadSchema.statics.findDuplicates = async function(email: string, phone: string, excludeId?: string) {
+  const query: any = {
+    $or: [
+      { email: email.toLowerCase().trim() },
+      { phone: phone.trim() }
+    ]
+  };
+  
+  if (excludeId) {
+    query._id = { $ne: excludeId };
+  }
+  
+  return this.find(query);
+};
+
+// Static method to get user-friendly duplicate error
+leadSchema.statics.getDuplicateError = function(error: any) {
+  if (error.code === 11000) {
+    const field = Object.keys(error.keyPattern)[0];
+    const value = error.keyValue[field];
+    
+    if (field === 'email') {
+      return `A lead with email "${value}" already exists`;
+    } else if (field === 'phone') {
+      return `A lead with phone number "${value}" already exists`;
+    }
+    return 'A lead with this information already exists';
+  }
+  return null;
+};
 
 const Lead = mongoose.model<ILead>('Lead', leadSchema);
 

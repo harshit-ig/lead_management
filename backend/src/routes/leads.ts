@@ -9,7 +9,12 @@ import {
   addNote,
   getMyLeads
 } from '../controllers/leadController';
-import { importFromExcel, getImportTemplate } from '../controllers/excelController';
+import { 
+  analyzeExcelFile,
+  getSheetPreview,
+  importWithMapping,
+  getLeadFields
+} from '../controllers/excelController';
 import { uploadExcel, handleUploadError, validateFilePresence } from '../middleware/upload';
 import { authenticateToken, requireAuth, requireAdmin } from '../middleware/auth';
 
@@ -27,9 +32,11 @@ router.post('/assign', requireAdmin, assignLeads);
 // Add note to lead
 router.post('/notes', addNote);
 
-// Excel import endpoints (admin only)
-router.get('/import/template', requireAdmin, getImportTemplate);
-router.post('/import/excel', requireAdmin, uploadExcel, handleUploadError, validateFilePresence, importFromExcel);
+// Smart Excel import endpoints (admin only)
+router.get('/import/fields', requireAdmin, getLeadFields);
+router.post('/import/analyze', requireAdmin, uploadExcel, handleUploadError, validateFilePresence, analyzeExcelFile);
+router.post('/import/preview', requireAdmin, uploadExcel, handleUploadError, validateFilePresence, getSheetPreview);
+router.post('/import', requireAdmin, uploadExcel, handleUploadError, validateFilePresence, importWithMapping);
 
 // CRUD operations
 router.get('/', getLeads); // Get all leads (filtered by role)

@@ -166,6 +166,60 @@ export interface ExcelUploadResponse {
   };
 }
 
+// Dynamic Excel Import Types
+export interface ExcelSheetInfo {
+  name: string;
+  rowCount: number;
+  columnHeaders: string[];
+  hasData: boolean;
+}
+
+export interface ExcelFileAnalysis {
+  fileName: string;
+  fileSize: number;
+  sheets: ExcelSheetInfo[];
+  uploadedAt: string;
+}
+
+export interface FieldMapping {
+  leadField: string;
+  excelColumn: string;
+  isRequired: boolean;
+  defaultValue?: string;
+}
+
+export interface SheetPreviewData {
+  headers: string[];
+  sampleRows: any[][];
+  totalRows: number;
+}
+
+export interface DynamicImportRequest {
+  fileName: string;
+  sheetName: string;
+  fieldMappings: FieldMapping[];
+  skipEmptyRows: boolean;
+  startFromRow: number;
+}
+
+export interface LeadFieldDefinition {
+  name: string;
+  label: string;
+  type: string;
+  required: boolean;
+  description: string;
+  options?: string[];
+  defaultValue?: string;
+}
+
+export interface ImportProgress {
+  isImporting: boolean;
+  progress: number;
+  currentStep: string;
+  totalRows: number;
+  processedRows: number;
+}
+
 // Filter Types
 export interface LeadFilters {
   status?: LeadStatus[];

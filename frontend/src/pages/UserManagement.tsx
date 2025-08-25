@@ -87,6 +87,9 @@ const UserManagement: React.FC = () => {
   };
 
   const filteredUsers = users.filter(user => {
+    // Filter out system user
+    if (user.email === 'system@leadmanager.com') return false;
+    
     const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;

@@ -18,6 +18,8 @@ import {
   securityHeaders,
   healthCheck
 } from './middleware';
+import User from './models/User';
+import bcrypt from 'bcryptjs';
 
 // Load environment variables
 dotenv.config();
@@ -104,6 +106,33 @@ app.get('/', (_req, res) => {
 app.use(notFoundHandler);
 app.use(errorHandler);
 
+// Function to ensure system user exists
+const ensureSystemUser = async (): Promise<void> => {
+  try {
+    const systemUser = await User.findOne({ email: 'system@leadmanager.com' });
+    
+    if (!systemUser) {
+      console.log('🔧 Creating system user...');
+      
+      const hashedPassword = await bcrypt.hash('system123456', 12);
+      
+      await User.create({
+        name: 'System',
+        email: 'system@leadmanager.com',
+        password: hashedPassword,
+        role: 'admin',
+        isActive: true
+      });
+      
+      console.log('✅ System user created successfully');
+    } else {
+      console.log('✅ System user already exists');
+    }
+  } catch (error) {
+    console.error('❌ Failed to ensure system user exists:', error);
+  }
+};
+
 // Graceful shutdown handler
 const gracefulShutdown = (signal: string) => {
   console.log(`📴 Received ${signal}, shutting down gracefully`);
@@ -132,6 +161,9 @@ const startServer = async (): Promise<any> => {
     // Connect to database
     await connectDatabase();
     
+    // Ensure system user exists
+    await ensureSystemUser();
+
     // Start listening
     const server = app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);

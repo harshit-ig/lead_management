@@ -5,7 +5,6 @@ import type {
   ExcelFileAnalysis, 
   SheetPreviewData, 
   FieldMapping, 
-  NoteMapping,
   LeadFieldDefinition,
   ExcelUploadResponse,
   DynamicImportRequest

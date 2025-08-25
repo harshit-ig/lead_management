@@ -11,7 +11,7 @@ export const getUsers = async (req: Request, res: Response): Promise<void> => {
     const skip = (pageNum - 1) * limitNum;
 
     // Build filter
-    const filter: any = {};
+    const filter: any = { email: { $ne: 'system@leadmanager.com' } };
     if (role) {
       filter.role = role;
     }

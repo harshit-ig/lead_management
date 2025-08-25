@@ -93,9 +93,9 @@ userSchema.statics.findByEmailWithPassword = function(email: string) {
 // Static method to get user stats
 userSchema.statics.getUserStats = async function() {
   const [totalUsers, activeUsers, adminUsers] = await Promise.all([
-    this.countDocuments(),
-    this.countDocuments({ isActive: true }),
-    this.countDocuments({ role: 'admin' })
+    this.countDocuments({ email: { $ne: 'system@leadmanager.com' } }),
+    this.countDocuments({ email: { $ne: 'system@leadmanager.com' }, isActive: true }),
+    this.countDocuments({ email: { $ne: 'system@leadmanager.com' }, role: 'admin' })
   ]);
 
   return {

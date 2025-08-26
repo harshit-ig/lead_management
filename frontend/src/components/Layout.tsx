@@ -1,4 +1,5 @@
-import React, { useState, ReactNode } from 'react';
+import React, { useState } from 'react';
+import type { ReactNode } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import Header from './Header';
 import Sidebar from './Sidebar';

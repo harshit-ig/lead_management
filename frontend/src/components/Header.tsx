@@ -2,9 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   Menu, 
-  User, 
   LogOut, 
-  Settings,
   ChevronDown
 } from 'lucide-react';
 

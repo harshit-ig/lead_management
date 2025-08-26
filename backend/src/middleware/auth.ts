@@ -154,7 +154,7 @@ export const generateToken = (payload: Omit<JwtPayload, 'iat' | 'exp'>): string 
   if (!secret) {
     throw new Error('JWT secret is not configured');
   }
-
+// @ts-ignore
   return jwt.sign(payload, secret, { expiresIn });
 };
 

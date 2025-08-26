@@ -13,7 +13,7 @@ router.use('/leads', leadRoutes);
 router.use('/dashboard', dashboardRoutes);
 
 // Health check for API
-router.get('/health', (req, res) => {
+router.get('/health', (_req, res) => {
   res.json({
     success: true,
     message: 'API is healthy',

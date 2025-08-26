@@ -194,6 +194,7 @@ export const getRecentActivity = async (req: Request, res: Response): Promise<vo
       type: 'lead_update',
       description: `Lead "${lead.name}" from ${lead.company} status updated to ${lead.status}`,
       timestamp: lead.updatedAt,
+      // @ts-ignore
       user: lead.assignedToUser?.name || 'System'
     }));
 

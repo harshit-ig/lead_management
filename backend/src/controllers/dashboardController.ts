@@ -5,7 +5,7 @@ import type { DashboardStats } from '../types';
 export const getDashboardStats = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = req.user?.userId;
-    
+
     if (!userId) {
       res.status(401).json({
         success: false,
@@ -16,7 +16,7 @@ export const getDashboardStats = async (req: Request, res: Response): Promise<vo
 
     // Get user-specific lead statistics
     const stats = await (Lead as any).getLeadStats(userId);
-    
+
     // Calculate additional metrics
     const averageResponseTime = 0; // TODO: Implement when we have interaction tracking
     const leadsGrowth = 0; // TODO: Implement growth calculation
@@ -57,29 +57,29 @@ export const getAdminDashboardStats = async (req: Request, res: Response): Promi
 
     // Get overall lead statistics (no userId filter)
     const leadStats = await (Lead as any).getLeadStats();
-    
+
     // Get top performers
     const topPerformers = await (Lead as any).getTopPerformers();
-    
+
     // Calculate growth metrics
     const currentDate = new Date();
     const lastMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
     const thisMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-    
+
     const [thisMonthLeads, lastMonthLeads] = await Promise.all([
       Lead.countDocuments({
         createdAt: { $gte: thisMonth }
       }),
       Lead.countDocuments({
-        createdAt: { 
+        createdAt: {
           $gte: lastMonth,
           $lt: thisMonth
         }
       })
     ]);
-    
-    const leadsGrowth = lastMonthLeads > 0 
-      ? ((thisMonthLeads - lastMonthLeads) / lastMonthLeads) * 100 
+
+    const leadsGrowth = lastMonthLeads > 0
+      ? ((thisMonthLeads - lastMonthLeads) / lastMonthLeads) * 100
       : thisMonthLeads > 0 ? 100 : 0;
 
     // Calculate average response time (placeholder)
@@ -111,7 +111,7 @@ export const getAdminDashboardStats = async (req: Request, res: Response): Promi
 export const getLeadsByStatus = async (req: Request, res: Response): Promise<void> => {
   try {
     const baseMatch = req.user?.role === 'admin' ? {} : { assignedTo: req.user?.userId };
-    
+
     const leadsByStatus = await Lead.aggregate([
       { $match: baseMatch },
       { $group: { _id: '$status', count: { $sum: 1 } } },
@@ -119,7 +119,7 @@ export const getLeadsByStatus = async (req: Request, res: Response): Promise<voi
     ]);
 
     const total = leadsByStatus.reduce((sum, item) => sum + item.count, 0);
-    
+
     const result = leadsByStatus.map(item => ({
       status: item._id,
       count: item.count,
@@ -144,7 +144,7 @@ export const getLeadsByStatus = async (req: Request, res: Response): Promise<voi
 export const getLeadsBySource = async (req: Request, res: Response): Promise<void> => {
   try {
     const baseMatch = req.user?.role === 'admin' ? {} : { assignedTo: req.user?.userId };
-    
+
     const leadsBySource = await Lead.aggregate([
       { $match: baseMatch },
       { $group: { _id: '$source', count: { $sum: 1 } } },
@@ -152,7 +152,7 @@ export const getLeadsBySource = async (req: Request, res: Response): Promise<voi
     ]);
 
     const total = leadsBySource.reduce((sum, item) => sum + item.count, 0);
-    
+
     const result = leadsBySource.map(item => ({
       source: item._id,
       count: item.count,
@@ -178,15 +178,15 @@ export const getRecentActivity = async (req: Request, res: Response): Promise<vo
   try {
     const { limit = 10 } = req.query;
     const limitNum = parseInt(limit as string, 10);
-    
+
     const baseMatch = req.user?.role === 'admin' ? {} : { assignedTo: req.user?.userId };
-    
+
     const recentLeads = await Lead.find(baseMatch)
-      .populate('assignedToUser', 'name email')
+      .populate('assignedTo', 'name email')
       .populate('assignedByUser', 'name email')
       .sort({ updatedAt: -1 })
       .limit(limitNum)
-      .select('name company status updatedAt assignedToUser assignedByUser')
+      .select('name company status updatedAt assignedTo assignedByUser')
       .lean();
 
     // Transform lead data into activity format
@@ -194,8 +194,9 @@ export const getRecentActivity = async (req: Request, res: Response): Promise<vo
       type: 'lead_update',
       description: `Lead "${lead.name}" from ${lead.company} status updated to ${lead.status}`,
       timestamp: lead.updatedAt,
-      // @ts-ignore
-      user: lead.assignedToUser?.name || 'System'
+      user: typeof lead.assignedTo === 'object' && lead.assignedTo && 'name' in lead.assignedTo
+        ? (lead.assignedTo as any).name
+        : 'System'
     }));
 
     res.status(200).json({
@@ -216,10 +217,10 @@ export const getRecentActivity = async (req: Request, res: Response): Promise<vo
 export const getLeadMetrics = async (req: Request, res: Response): Promise<void> => {
   try {
     const { period = '30d' } = req.query;
-    
+
     let dateFilter: any = {};
     const now = new Date();
-    
+
     switch (period) {
       case '7d':
         dateFilter = {
@@ -241,9 +242,9 @@ export const getLeadMetrics = async (req: Request, res: Response): Promise<void>
         break;
     }
 
-    const baseMatch = req.user?.role === 'admin' ? dateFilter : { 
-      ...dateFilter, 
-      assignedTo: req.user?.userId 
+    const baseMatch = req.user?.role === 'admin' ? dateFilter : {
+      ...dateFilter,
+      assignedTo: req.user?.userId
     };
 
     const metrics = await Lead.aggregate([
@@ -283,7 +284,7 @@ export const getLeadMetrics = async (req: Request, res: Response): Promise<void>
     };
 
     // Calculate conversion rate
-    result.conversionRate = result.totalLeads > 0 
+    result.conversionRate = result.totalLeads > 0
       ? (result.closedWon / result.totalLeads) * 100
       : 0;
 

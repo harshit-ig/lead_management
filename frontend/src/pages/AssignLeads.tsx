@@ -51,7 +51,7 @@ const AssignLeads: React.FC = () => {
 
   useEffect(() => {
     fetchLeads();
-  }, [currentPage]);
+  }, [currentPage , showUnassignedOnly]);
 
   const fetchData = async () => {
     await Promise.all([fetchLeads(), fetchUsers()]);

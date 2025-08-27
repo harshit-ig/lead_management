@@ -144,7 +144,7 @@ export const getLeadById = async (req: Request, res: Response): Promise<void> =>
     }
 
     // Check if user can access this lead
-    if (req.user?.role !== 'admin' && lead.assignedTo !== req.user?.userId) {
+    if (req.user?.role !== 'admin' && String(lead.assignedTo) !== String(req.user?.userId)) {
       res.status(403).json({
         success: false,
         message: 'Access denied'
@@ -223,18 +223,18 @@ export const createLead = async (req: Request, res: Response): Promise<void> => 
       });
       return;
     }
-
+    const {notes, ...leadFields} = leadData;
     // Create lead
     const lead = new Lead({
-      ...leadData,
+      ...leadFields,
       assignedBy: req.user?.userId
     });
 
     // Add initial note if provided
-    if (leadData.notes) {
+    if (notes) {
       lead.notes.push({
         id: new mongoose.Types.ObjectId().toString(),
-        content: leadData.notes,
+        content: notes,
         createdBy: new mongoose.Types.ObjectId(req.user?.userId || ''),
         createdAt: new Date()
       });
@@ -287,7 +287,7 @@ export const updateLead = async (req: Request, res: Response): Promise<void> => 
     }
 
     // Check if user can update this lead
-    if (req.user?.role !== 'admin' && lead.assignedTo !== req.user?.userId) {
+    if (req.user?.role !== 'admin' && String(lead.assignedTo) !== String(req.user?.userId)) {
       res.status(403).json({
         success: false,
         message: 'Access denied'
@@ -529,7 +529,7 @@ export const addNote = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Check if user can add notes to this lead
-    if (req.user?.role !== 'admin' && lead.assignedTo !== req.user?.userId) {
+    if (req.user?.role !== 'admin' && String(lead.assignedTo) !== String(req.user?.userId)) {
       res.status(403).json({
         success: false,
         message: 'Access denied'

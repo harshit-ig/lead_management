@@ -25,7 +25,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
   const navigation: NavItem[] = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'All Leads', href: '/leads', icon: ClipboardList },
+    { name: 'All Leads', href: '/leads', icon: ClipboardList , adminOnly: true },
     { name: 'My Leads', href: '/my-leads', icon: Target },
     { name: 'Add Lead', href: '/leads/new', icon: UserPlus },
     { name: 'Import Leads', href: '/leads/import', icon: Upload, adminOnly: true },

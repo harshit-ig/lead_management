@@ -79,11 +79,11 @@ const leadSchema = new Schema<ILead>({
     required: true
   },
   assignedTo: {
-    type: String,
+    type: Schema.Types.ObjectId,
     ref: 'User'
   },
   assignedBy: {
-    type: String,
+    type: Schema.Types.ObjectId,
     ref: 'User'
   },
   notes: [leadNoteSchema],
@@ -100,7 +100,6 @@ const leadSchema = new Schema<ILead>({
 });
 
 // Indexes for better performance
-leadSchema.index({ email: 1 });
 leadSchema.index({ company: 1 });
 leadSchema.index({ status: 1 });
 leadSchema.index({ source: 1 });
@@ -139,7 +138,7 @@ leadSchema.virtual('assignedByUser', {
 });
 
 // Virtual populate for notes with user info
-leadSchema.virtual('notesWithUsers').get(function() {
+leadSchema.virtual('notesWithUsers').get(function () {
   return this.notes.map(note => ({
     ...(note as any),
     createdByUser: undefined // Will be populated separately if needed
@@ -147,9 +146,9 @@ leadSchema.virtual('notesWithUsers').get(function() {
 });
 
 // Static method to get lead statistics
-leadSchema.statics.getLeadStats = async function(userId?: string) {
+leadSchema.statics.getLeadStats = async function (userId?: string) {
   const baseMatch = userId ? { assignedTo: userId } : {};
-  
+
   const [
     totalLeads,
     newLeads,
@@ -210,7 +209,7 @@ leadSchema.statics.getLeadStats = async function(userId?: string) {
 };
 
 // Static method to get top performers (admin only)
-leadSchema.statics.getTopPerformers = async function() {
+leadSchema.statics.getTopPerformers = async function () {
   return this.aggregate([
     {
       $match: {
@@ -269,7 +268,7 @@ leadSchema.statics.getTopPerformers = async function() {
 };
 
 // Instance method to add note
-leadSchema.methods.addNote = function(content: string, createdBy: mongoose.Types.ObjectId) {
+leadSchema.methods.addNote = function (content: string, createdBy: mongoose.Types.ObjectId) {
   this.notes.push({
     id: new mongoose.Types.ObjectId().toString(),
     content,
@@ -280,7 +279,7 @@ leadSchema.methods.addNote = function(content: string, createdBy: mongoose.Types
 };
 
 // Pre-save middleware to update lead score based on status
-leadSchema.pre('save', function(next) {
+leadSchema.pre('save', function (next) {
   if (this.isModified('status')) {
     const scoreMap: Record<LeadStatus, number> = {
       'New': 20,
@@ -294,37 +293,38 @@ leadSchema.pre('save', function(next) {
       'Closed-Won': 100,
       'Closed-Lost': 0
     };
-    
+
     this.leadScore = scoreMap[this.status] || 50;
   }
   next();
 });
 
 // Create indexes for better performance and uniqueness
+leadSchema.index({ email: 1 }, { unique: true });
 leadSchema.index({ phone: 1 }, { unique: true });
 
 // Static method to check for duplicates
-leadSchema.statics.findDuplicates = async function(email: string, phone: string, excludeId?: string) {
+leadSchema.statics.findDuplicates = async function (email: string, phone: string, excludeId?: string) {
   const query: any = {
     $or: [
       { email: email.toLowerCase().trim() },
       { phone: phone.trim() }
     ]
   };
-  
+
   if (excludeId) {
     query._id = { $ne: excludeId };
   }
-  
+
   return this.find(query);
 };
 
 // Static method to get user-friendly duplicate error
-leadSchema.statics.getDuplicateError = function(error: any) {
+leadSchema.statics.getDuplicateError = function (error: any) {
   if (error.code === 11000) {
     const field = Object.keys(error.keyPattern)[0];
     const value = error.keyValue[field];
-    
+
     if (field === 'email') {
       return `A lead with email "${value}" already exists`;
     } else if (field === 'phone') {

@@ -1,5 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
-import type { ILead, ILeadNote, LeadSource, LeadStatus, LeadPriority } from '../types';
+import type { ILead, ILeadNote, ILeadModel, LeadSource, LeadStatus, LeadPriority , IUser } from '../types';
 
 const leadNoteSchema = new Schema<ILeadNote>({
   id: {
@@ -137,13 +137,22 @@ leadSchema.virtual('assignedByUser', {
   justOne: true
 });
 
-// Virtual populate for notes with user info
-leadSchema.virtual('notesWithUsers').get(function () {
-  return this.notes.map(note => ({
-    ...(note as any),
-    createdByUser: undefined // Will be populated separately if needed
+// Helper method to get notes with populated users
+leadSchema.methods.getNotesWithUsers = async function () {
+  await this.populate('notes.createdBy', 'name email role'); // populate only required fields
+
+  return this.notes.map((note: ILeadNote & { createdBy: IUser }) => ({
+    id: note.id,
+    content: note.content,
+    createdAt: note.createdAt,
+    createdBy: {
+      id: note.createdBy._id,
+      name: note.createdBy.name,
+      email: note.createdBy.email,
+      role: note.createdBy.role
+    }
   }));
-});
+};
 
 // Static method to get lead statistics
 leadSchema.statics.getLeadStats = async function (userId?: string) {
@@ -279,7 +288,7 @@ leadSchema.methods.addNote = function (content: string, createdBy: mongoose.Type
 };
 
 // Pre-save middleware to update lead score based on status
-leadSchema.pre('save', function (next) {
+leadSchema.pre<ILead>('save', function (next) {
   if (this.isModified('status')) {
     const scoreMap: Record<LeadStatus, number> = {
       'New': 20,
@@ -335,6 +344,6 @@ leadSchema.statics.getDuplicateError = function (error: any) {
   return null;
 };
 
-const Lead = mongoose.model<ILead>('Lead', leadSchema);
+const Lead = mongoose.model<ILead , ILeadModel>('Lead', leadSchema);
 
 export default Lead;

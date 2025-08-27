@@ -36,8 +36,8 @@ export interface ILead extends Document {
   source: LeadSource;
   status: LeadStatus;
   priority: LeadPriority;
-  assignedTo?: string;
-  assignedBy?: string;
+  assignedTo?: mongoose.Types.ObjectId;
+  assignedBy?: mongoose.Types.ObjectId;
   notes: ILeadNote[];
   leadScore?: number;
   createdAt: Date;

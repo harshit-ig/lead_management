@@ -3,7 +3,6 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
   LayoutDashboard,
-  Users,
   UserPlus,
   ClipboardList,
   Upload,
@@ -14,6 +13,7 @@ import {
   Target
 } from 'lucide-react';
 import type { NavItem } from '../types';
+import Logo from './Logo';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -51,9 +51,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         {/* Logo */}
         <div className="sidebar-header">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-              <Users className="w-5 h-5 text-white" />
-            </div>
+            <Logo />
             <div>
               <h1 className="text-lg font-bold text-gray-900">Lead Manager</h1>
               <p className="text-xs text-gray-500">

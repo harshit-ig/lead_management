@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import type { LoginCredentials } from '../types';
-import { Lock, Mail, AlertCircle, Eye, EyeOff, Users } from 'lucide-react';
+import { Lock, Mail, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import Logo from './Logo';
 
 const Login: React.FC = () => {
   const { login } = useAuth();
@@ -42,9 +43,7 @@ const Login: React.FC = () => {
         <div className="mx-auto w-full max-w-sm lg:w-96">
           <div>
             <div className="flex items-center gap-3 mb-8">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-                <Users className="w-6 h-6 text-white" />
-              </div>
+              <Logo />
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Lead Manager</h1>
                 <p className="text-sm text-gray-500">Management Portal</p>

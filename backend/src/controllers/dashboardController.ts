@@ -179,7 +179,7 @@ export const getRecentActivity = async (req: Request, res: Response): Promise<vo
     const { limit = 10 } = req.query;
     const limitNum = parseInt(limit as string, 10);
 
-    const baseMatch = req.user?.role === 'admin' ? {} : { assignedTo: req.user?.userId };
+  const baseMatch = req.user?.role === 'admin' ? {} : { assignedTo: typeof req.user?.userId === 'string' ? new (require('mongoose')).Types.ObjectId(req.user.userId) : req.user?.userId };
 
     const recentLeads = await Lead.find(baseMatch)
       .populate('assignedTo', 'name email')

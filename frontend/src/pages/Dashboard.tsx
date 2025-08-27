@@ -18,12 +18,33 @@ import {
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [activity, setActivity] = useState<Array<{ type: string; description: string; timestamp: string; user: string }>>([]);
+  const [activityLoading, setActivityLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     fetchStats();
+    if (user?.role !== 'admin') {
+      fetchActivity();
+    }
   }, []);
+
+  const fetchActivity = async () => {
+    try {
+      setActivityLoading(true);
+      const response = await dashboardApi.getRecentActivity();
+      if (response.success && response.data) {
+        setActivity(response.data);
+      } else {
+        setActivity([]);
+      }
+    } catch (error) {
+      setActivity([]);
+    } finally {
+      setActivityLoading(false);
+    }
+  };
 
   const fetchStats = async () => {
     try {
@@ -304,6 +325,30 @@ const Dashboard: React.FC = () => {
                 </div>
               ))}
             </div>
+          ) : user?.role !== 'admin' ? (
+            activityLoading ? (
+              <div className="text-center py-8">
+                <Activity className="w-12 h-12 text-gray-300 mx-auto mb-3 animate-spin" />
+                <p className="text-gray-500">Loading recent activity...</p>
+              </div>
+            ) : activity.length > 0 ? (
+              <ul className="divide-y divide-gray-100">
+                {activity.map((item, idx) => (
+                  <li key={idx} className="py-4 flex items-start gap-4">
+                    <Activity className="w-6 h-6 text-blue-500 mt-1" />
+                    <div>
+                      <div className="text-sm text-gray-900">{item.description}</div>
+                      <div className="text-xs text-gray-500">{item.user} &middot; {new Date(item.timestamp).toLocaleString()}</div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="text-center py-8">
+                <Activity className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500">No recent activity to display</p>
+              </div>
+            )
           ) : (
             <div className="text-center py-8">
               <Activity className="w-12 h-12 text-gray-300 mx-auto mb-3" />

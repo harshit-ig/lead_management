@@ -247,30 +247,40 @@ export const getLeadMetrics = async (req: Request, res: Response): Promise<void>
       assignedTo: req.user?.userId
     };
 
-    const metrics = await Lead.aggregate([
-      { $match: baseMatch },
-      {
-        $group: {
-          _id: null,
-          totalLeads: { $sum: 1 },
-          newLeads: {
-            $sum: { $cond: [{ $eq: ['$status', 'New'] }, 1, 0] }
-          },
-          contactedLeads: {
-            $sum: { $cond: [{ $eq: ['$status', 'Contacted'] }, 1, 0] }
-          },
-          qualifiedLeads: {
-            $sum: { $cond: [{ $eq: ['$status', 'Qualified'] }, 1, 0] }
-          },
-          closedWon: {
-            $sum: { $cond: [{ $eq: ['$status', 'Closed-Won'] }, 1, 0] }
-          },
-          closedLost: {
-            $sum: { $cond: [{ $eq: ['$status', 'Closed-Lost'] }, 1, 0] }
-          },
-          avgLeadScore: { $avg: '$leadScore' }
+    // Calculate leads this week and this month
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday
+    startOfWeek.setHours(0, 0, 0, 0);
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const [metrics, leadsThisWeek, leadsThisMonth] = await Promise.all([
+      Lead.aggregate([
+        { $match: baseMatch },
+        {
+          $group: {
+            _id: null,
+            totalLeads: { $sum: 1 },
+            newLeads: {
+              $sum: { $cond: [{ $eq: ['$status', 'New'] }, 1, 0] }
+            },
+            contactedLeads: {
+              $sum: { $cond: [{ $eq: ['$status', 'Contacted'] }, 1, 0] }
+            },
+            qualifiedLeads: {
+              $sum: { $cond: [{ $eq: ['$status', 'Qualified'] }, 1, 0] }
+            },
+            closedWon: {
+              $sum: { $cond: [{ $eq: ['$status', 'Closed-Won'] }, 1, 0] }
+            },
+            closedLost: {
+              $sum: { $cond: [{ $eq: ['$status', 'Closed-Lost'] }, 1, 0] }
+            },
+            avgLeadScore: { $avg: '$leadScore' }
+          }
         }
-      }
+      ]),
+      Lead.countDocuments({ ...baseMatch, createdAt: { $gte: startOfWeek } }),
+      Lead.countDocuments({ ...baseMatch, createdAt: { $gte: startOfMonth } })
     ]);
 
     const result = metrics.length > 0 ? metrics[0] : {
@@ -284,14 +294,19 @@ export const getLeadMetrics = async (req: Request, res: Response): Promise<void>
     };
 
     // Calculate conversion rate
-    result.conversionRate = result.totalLeads > 0
+    result.conversionRate = result.totalLeads > 0 
       ? (result.closedWon / result.totalLeads) * 100
       : 0;
 
     res.status(200).json({
       success: true,
       message: 'Lead metrics retrieved successfully',
-      data: result
+      data: {
+        ...result,
+        leadsThisWeek,
+        leadsThisMonth,
+        averageResponseTime: 0 // Placeholder
+      }
     });
   } catch (error) {
     console.error('Get lead metrics error:', error);

@@ -293,6 +293,19 @@ export const leadApi = {
     }
   },
 
+  // Get stats for all leads assigned to the current user (independent of filters or pagination)
+  getMyLeadsStats: async (): Promise<ApiResponse<{ total: number; newLeads: number; inProgress: number; closed: number }>> => {
+    try {
+      const response = await api.get('/leads/my-leads/stats');
+      return response.data;
+    } catch (error) {
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to fetch your leads stats',
+      };
+    }
+  },
+
   // Smart Excel Import APIs
   getLeadFields: async (): Promise<ApiResponse<LeadFieldDefinition[]>> => {
     try {

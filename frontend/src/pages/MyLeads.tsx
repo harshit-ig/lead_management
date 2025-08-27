@@ -23,6 +23,7 @@ const MyLeads: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<LeadStatus | ''>('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [allStats, setAllStats] = useState<{ total: number; newLeads: number; inProgress: number; closed: number }>({ total: 0, newLeads: 0, inProgress: 0, closed: 0 });
 
   const statusOptions: LeadStatus[] = [
     'New', 'Contacted', 'Interested', 'Not Interested', 'Follow-up', 
@@ -31,7 +32,19 @@ const MyLeads: React.FC = () => {
 
   useEffect(() => {
     fetchMyLeads();
+    fetchAllStats();
   }, [currentPage, statusFilter]);
+
+  const fetchAllStats = async () => {
+    try {
+      const response = await leadApi.getMyLeadsStats();
+      if (response.success && response.data) {
+        setAllStats(response.data);
+      }
+    } catch (error) {
+      // ignore
+    }
+  };
 
   const fetchMyLeads = async () => {
     try {
@@ -107,20 +120,7 @@ const MyLeads: React.FC = () => {
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
-  const getLeadStats = () => {
-    const total = leads.length;
-    const newLeads = leads.filter(lead => lead.status === 'New').length;
-    const inProgress = leads.filter(lead => 
-      ['Contacted', 'Interested', 'Follow-up', 'Qualified', 'Proposal Sent', 'Negotiating'].includes(lead.status)
-    ).length;
-    const closed = leads.filter(lead => 
-      ['Closed-Won', 'Closed-Lost'].includes(lead.status)
-    ).length;
-
-    return { total, newLeads, inProgress, closed };
-  };
-
-  const stats = getLeadStats();
+  const stats = allStats;
 
   if (loading) {
     return (

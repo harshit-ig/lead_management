@@ -613,3 +613,32 @@ export const getMyLeads = async (req: Request, res: Response): Promise<void> => 
     });
   }
 };
+// Get stats for all leads assigned to the current user (independent of filters or pagination)
+export const getMyLeadsStats = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const filter = { assignedTo: req.user?.userId };
+    const leads = await Lead.find(filter).lean();
+
+    const total = leads.length;
+    const newLeads = leads.filter(lead => lead.status === 'New').length;
+    const inProgress = leads.filter(lead =>
+      ['Contacted', 'Interested', 'Follow-up', 'Qualified', 'Proposal Sent', 'Negotiating'].includes(lead.status)
+    ).length;
+    const closed = leads.filter(lead =>
+      ['Closed-Won', 'Closed-Lost'].includes(lead.status)
+    ).length;
+
+    res.status(200).json({
+      success: true,
+      message: 'My leads stats retrieved successfully',
+      data: { total, newLeads, inProgress, closed }
+    });
+  } catch (error) {
+    console.error('Get my leads stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve your leads stats',
+      errors: [error instanceof Error ? error.message : 'Unknown error occurred']
+    });
+  }
+};

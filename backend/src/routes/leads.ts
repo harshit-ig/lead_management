@@ -7,7 +7,8 @@ import {
   deleteLead,
   assignLeads,
   addNote,
-  getMyLeads
+  getMyLeads,
+  getMyLeadsStats
 } from '../controllers/leadController';
 import { 
   analyzeExcelFile,
@@ -25,6 +26,8 @@ router.use(authenticateToken, requireAuth);
 
 // My leads endpoint (for users to see their assigned leads)
 router.get('/my-leads', getMyLeads);
+// My leads stats endpoint (for users to get stats for all their assigned leads)
+router.get('/my-leads/stats', getMyLeadsStats);
 
 // Lead assignment (admin only)
 router.post('/assign', requireAdmin, assignLeads);

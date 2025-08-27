@@ -305,7 +305,7 @@ export const getLeadMetrics = async (req: Request, res: Response): Promise<void>
         ...result,
         leadsThisWeek,
         leadsThisMonth,
-        averageResponseTime: 0 // Placeholder
+        leadWon: result.closedWon
       }
     });
   } catch (error) {

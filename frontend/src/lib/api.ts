@@ -416,7 +416,7 @@ export const dashboardApi = {
     }
   },
 
-  getLeadMetrics: async (): Promise<ApiResponse<{ conversionRate: number; averageResponseTime: number; leadsThisWeek: number; leadsThisMonth: number }>> => {
+  getLeadMetrics: async (): Promise<ApiResponse<{ conversionRate: number; leadWon: number; leadsThisWeek: number; leadsThisMonth: number }>> => {
     try {
       const response = await api.get('/dashboard/metrics');
       return handleResponse(response);

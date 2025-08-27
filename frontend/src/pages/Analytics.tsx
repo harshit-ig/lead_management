@@ -20,11 +20,12 @@ interface AnalyticsData {
   leadsByStatus: Array<{ status: string; count: number; percentage: number }>;
   leadsBySource: Array<{ source: string; count: number; percentage: number }>;
   recentActivity: Array<{ type: string; description: string; timestamp: string; user: string }>;
-  metrics: { 
-    conversionRate: number; 
-    averageResponseTime: number; 
-    leadsThisWeek: number; 
-    leadsThisMonth: number; 
+  metrics: {
+    conversionRate: number;
+    averageResponseTime?: number;
+    leadsThisWeek: number;
+    leadsThisMonth: number;
+    leadWon?: number;
   };
 }
 
@@ -363,9 +364,9 @@ const Analytics: React.FC = () => {
                 </div>
                 <div className="text-center p-4 bg-green-50 rounded-lg">
                   <div className="text-2xl font-bold text-green-600">
-                    {analyticsData.metrics.averageResponseTime}h
+                    {analyticsData?.metrics.leadWon ?? 0}
                   </div>
-                  <div className="text-sm text-gray-600">Avg Response Time</div>
+                  <div className="text-sm text-gray-600">Lead Won</div>
                 </div>
                 <div className="text-center p-4 bg-orange-50 rounded-lg">
                   <div className="text-2xl font-bold text-orange-600">

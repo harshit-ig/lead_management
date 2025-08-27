@@ -19,7 +19,6 @@ import {
   healthCheck
 } from './middleware';
 import User from './models/User';
-import bcrypt from 'bcryptjs';
 
 // Load environment variables
 dotenv.config();
@@ -113,17 +112,13 @@ const ensureSystemUser = async (): Promise<void> => {
     
     if (!systemUser) {
       console.log('🔧 Creating system user...');
-      
-      const hashedPassword = await bcrypt.hash('system123456', 12);
-      
       await User.create({
         name: 'System',
         email: 'system@leadmanager.com',
-        password: hashedPassword,
+        password: 'system123456', // let pre-save hook hash it
         role: 'admin',
         isActive: true
       });
-      
       console.log('✅ System user created successfully');
     } else {
       console.log('✅ System user already exists');

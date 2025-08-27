@@ -36,7 +36,6 @@ const leadSchema = new Schema<ILead>({
     required: [true, 'Email is required'],
     trim: true,
     lowercase: true,
-    unique: true,
     match: [
       /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
       'Please enter a valid email address'
@@ -46,7 +45,6 @@ const leadSchema = new Schema<ILead>({
     type: String,
     required: [true, 'Phone is required'],
     trim: true,
-    unique: true,
     match: [
       /^[\+]?[\d\s\-\(\)\.]{7,25}$/,
       'Please enter a valid phone number'
@@ -82,8 +80,7 @@ const leadSchema = new Schema<ILead>({
   },
   assignedTo: {
     type: String,
-    ref: 'User',
-    index: true
+    ref: 'User'
   },
   assignedBy: {
     type: String,
@@ -304,7 +301,6 @@ leadSchema.pre('save', function(next) {
 });
 
 // Create indexes for better performance and uniqueness
-leadSchema.index({ email: 1 }, { unique: true });
 leadSchema.index({ phone: 1 }, { unique: true });
 
 // Static method to check for duplicates

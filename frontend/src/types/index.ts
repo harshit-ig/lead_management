@@ -37,6 +37,7 @@ export interface Lead {
   phone: string;
   company: string;
   position: string;
+  location: string;
   source: LeadSource;
   status: LeadStatus;
   priority: LeadPriority;
@@ -92,6 +93,11 @@ export interface DashboardStats {
     count: number;
     percentage: number;
   }>;
+  leadsByLocation: Array<{
+    location: string;
+    count: number;
+    percentage: number;
+  }>;
   lastUpdated: string;
 }
 
@@ -122,6 +128,7 @@ export interface CreateLeadForm {
   phone: string;
   company?: string;
   position?: string;
+  location?: string;
   source: LeadSource;
   priority: LeadPriority;
   notes?: string;
@@ -133,6 +140,7 @@ export interface UpdateLeadForm {
   phone?: string;
   company?: string;
   position?: string;
+  location?: string;
   source?: LeadSource;
   status?: LeadStatus;
   priority?: LeadPriority;
@@ -231,6 +239,7 @@ export interface LeadFilters {
   source?: LeadSource[];
   priority?: LeadPriority[];
   assignedTo?: string[];
+  location?: string[];
   dateRange?: {
     from: string;
     to: string;

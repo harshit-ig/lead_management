@@ -12,6 +12,7 @@ import {
   Phone,
   Mail,
   Building,
+  MapPin,
   Calendar,
   RefreshCw
 } from 'lucide-react';
@@ -28,6 +29,7 @@ const AllLeads: React.FC = () => {
   const [totalLeads, setTotalLeads] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
   const [deleteLead, setDeleteLead] = useState<Lead | null>(null);
+  const [availableLocations, setAvailableLocations] = useState<string[]>([]);
   const leadsPerPage = 10;
   
   // Filter states
@@ -35,7 +37,8 @@ const AllLeads: React.FC = () => {
     status: [],
     source: [],
     priority: [],
-    assignedTo: []
+    assignedTo: [],
+    location: []
   });
 
   const statusOptions: LeadStatus[] = [
@@ -51,7 +54,19 @@ const AllLeads: React.FC = () => {
 
   useEffect(() => {
     fetchLeads();
+    fetchDistinctLocations();
   }, [currentPage, filters]);
+
+  const fetchDistinctLocations = async () => {
+    try {
+      const response = await leadApi.getDistinctLocations();
+      if (response.success && response.data) {
+        setAvailableLocations(response.data);
+      }
+    } catch (error) {
+      // Ignore errors for location fetching
+    }
+  };
 
   const fetchLeads = async () => {
     try {
@@ -89,7 +104,7 @@ const AllLeads: React.FC = () => {
   };
 
   const clearFilters = () => {
-    setFilters({ status: [], source: [], priority: [], assignedTo: [] });
+    setFilters({ status: [], source: [], priority: [], assignedTo: [], location: [] });
     setSearchQuery('');
     setCurrentPage(1);
     setSelectedLeads([]); // Clear selection when filters are cleared
@@ -265,7 +280,7 @@ const AllLeads: React.FC = () => {
       {showFilters && (
         <div className="card">
           <div className="card-body">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               {/* Status Filter */}
               <div>
                 <label className="form-label">Status</label>
@@ -317,6 +332,27 @@ const AllLeads: React.FC = () => {
                       <span className="text-sm">{priority}</span>
                     </label>
                   ))}
+                </div>
+              </div>
+
+              {/* Location Filter */}
+              <div>
+                <label className="form-label">Location</label>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {availableLocations.map(location => (
+                    <label key={location} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={filters.location?.includes(location)}
+                        onChange={() => handleFilterChange('location', location)}
+                        className="mr-2"
+                      />
+                      <span className="text-sm">{location}</span>
+                    </label>
+                  ))}
+                  {availableLocations.length === 0 && (
+                    <p className="text-sm text-gray-500">No locations found</p>
+                  )}
                 </div>
               </div>
 
@@ -377,6 +413,7 @@ const AllLeads: React.FC = () => {
                 </th>
                 <th className="whitespace-nowrap">Lead Details</th>
                 <th className="whitespace-nowrap">Company</th>
+                <th className="whitespace-nowrap">Location</th>
                 <th className="whitespace-nowrap">Contact</th>
                 <th className="whitespace-nowrap">Status</th>
                 <th className="whitespace-nowrap">Priority</th>
@@ -406,6 +443,14 @@ const AllLeads: React.FC = () => {
                     <div className="flex items-center">
                       <Building className="w-4 h-4 text-gray-400 mr-2" />
                       {lead.company}
+                    </div>
+                  </td>
+                  <td className="whitespace-nowrap">
+                    <div className="flex items-center">
+                      <MapPin className="w-4 h-4 text-gray-400 mr-2" />
+                      <span className="text-sm text-gray-600">
+                        {lead.location || 'Not specified'}
+                      </span>
                     </div>
                   </td>
                   <td className="whitespace-nowrap">

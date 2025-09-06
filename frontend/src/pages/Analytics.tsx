@@ -9,6 +9,7 @@ import {
   DollarSign,
   BarChart3,
   PieChart,
+  MapPin,
   Download,
   RefreshCw,
   AlertTriangle,
@@ -139,6 +140,14 @@ const Analytics: React.FC = () => {
       analyticsData.leadsBySource.forEach(item => {
         rows.push([item.source, item.count.toString(), Number(item.percentage).toFixed(1) + '%']);
       });
+      
+      if (stats?.leadsByLocation && stats.leadsByLocation.length > 0) {
+        rows.push(['', '', '']); // Empty row
+        rows.push(['LEADS BY LOCATION', '', '']);
+        stats.leadsByLocation.forEach(item => {
+          rows.push([item.location, item.count.toString(), Number(item.percentage).toFixed(1) + '%']);
+        });
+      }
     }
     
     return [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
@@ -156,6 +165,14 @@ const Analytics: React.FC = () => {
     const colors = [
       'bg-emerald-500', 'bg-cyan-500', 'bg-orange-500', 'bg-rose-500',
       'bg-violet-500', 'bg-amber-500', 'bg-teal-500', 'bg-lime-500'
+    ];
+    return colors[index % colors.length];
+  };
+
+  const getLocationColor = (index: number): string => {
+    const colors = [
+      'bg-sky-500', 'bg-fuchsia-500', 'bg-green-500', 'bg-red-500',
+      'bg-yellow-500', 'bg-purple-500', 'bg-pink-500', 'bg-indigo-500'
     ];
     return colors[index % colors.length];
   };
@@ -340,6 +357,43 @@ const Analytics: React.FC = () => {
               <div className="text-center py-8">
                 <PieChart className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                 <p className="text-gray-500">No source data available</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Leads by Location */}
+        <div className="card">
+          <div className="card-header flex items-center justify-between">
+            <h3 className="text-lg font-semibold">Leads by Location</h3>
+            <MapPin className="w-5 h-5 text-gray-500" />
+          </div>
+          <div className="card-body">
+            {stats?.leadsByLocation && stats.leadsByLocation.length > 0 ? (
+              <div className="space-y-4">
+                {stats.leadsByLocation.slice(0, 8).map((item, index) => (
+                  <div key={item.location} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-4 h-4 rounded ${getLocationColor(index)}`}></div>
+                      <span className="text-sm font-medium text-gray-900">{item.location}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 bg-gray-200 rounded-full h-2 w-24">
+                        <div 
+                          className={`h-2 rounded-full ${getLocationColor(index)}`}
+                          style={{ width: `${Number(item.percentage)}%` }}
+                        ></div>
+                      </div>
+                      <span className="text-sm font-bold text-gray-900 w-8">{item.count}</span>
+                      <span className="text-xs text-gray-500 w-10">{Number(item.percentage).toFixed(1)}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <MapPin className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500">No location data available</p>
               </div>
             )}
           </div>

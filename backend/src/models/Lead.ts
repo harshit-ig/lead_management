@@ -60,6 +60,12 @@ const leadSchema = new Schema<ILead>({
     trim: true,
     maxlength: [100, 'Position cannot exceed 100 characters']
   },
+  location: {
+    type: String,
+    trim: true,
+    maxlength: [100, 'Location cannot exceed 100 characters'],
+    default: ''
+  },
   source: {
     type: String,
     enum: ['Website', 'Social Media', 'Referral', 'Import', 'Manual', 'Cold Call', 'Email Campaign'] as LeadSource[],
@@ -104,6 +110,7 @@ leadSchema.index({ company: 1 });
 leadSchema.index({ status: 1 });
 leadSchema.index({ source: 1 });
 leadSchema.index({ priority: 1 });
+leadSchema.index({ location: 1 });
 leadSchema.index({ assignedTo: 1 });
 leadSchema.index({ createdAt: -1 });
 leadSchema.index({ updatedAt: -1 });
@@ -112,13 +119,16 @@ leadSchema.index({ updatedAt: -1 });
 leadSchema.index({ status: 1, assignedTo: 1 });
 leadSchema.index({ source: 1, createdAt: -1 });
 leadSchema.index({ priority: 1, status: 1 });
+leadSchema.index({ location: 1, status: 1 });
+leadSchema.index({ location: 1, assignedTo: 1 });
 
 // Text index for search functionality
 leadSchema.index({
   name: 'text',
   email: 'text',
   company: 'text',
-  position: 'text'
+  position: 'text',
+  location: 'text'
 });
 
 // Virtual populate for assigned user
@@ -167,7 +177,8 @@ leadSchema.statics.getLeadStats = async function (userId?: string) {
     closedLost,
     leadsThisMonth,
     leadsByStatus,
-    leadsBySource
+    leadsBySource,
+    leadsByLocation
   ] = await Promise.all([
     this.countDocuments(baseMatch),
     this.countDocuments({ ...baseMatch, status: 'New' }),
@@ -190,6 +201,12 @@ leadSchema.statics.getLeadStats = async function (userId?: string) {
       { $match: baseMatch },
       { $group: { _id: '$source', count: { $sum: 1 } } },
       { $sort: { count: -1 } }
+    ]),
+    this.aggregate([
+      { $match: { ...baseMatch, location: { $ne: '' } } },
+      { $group: { _id: '$location', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 10 }
     ])
   ]);
 
@@ -211,6 +228,11 @@ leadSchema.statics.getLeadStats = async function (userId?: string) {
     })),
     leadsBySource: leadsBySource.map(item => ({
       source: item._id,
+      count: item.count,
+      percentage: totalLeads > 0 ? (item.count / totalLeads) * 100 : 0
+    })),
+    leadsByLocation: leadsByLocation.map(item => ({
+      location: item._id,
       count: item.count,
       percentage: totalLeads > 0 ? (item.count / totalLeads) * 100 : 0
     }))

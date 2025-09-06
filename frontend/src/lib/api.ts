@@ -306,6 +306,16 @@ export const leadApi = {
     }
   },
 
+  // Get distinct locations for filtering
+  getDistinctLocations: async (): Promise<ApiResponse<string[]>> => {
+    try {
+      const response = await api.get('/leads/locations');
+      return handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  },
+
   // Smart Excel Import APIs
   getLeadFields: async (): Promise<ApiResponse<LeadFieldDefinition[]>> => {
     try {

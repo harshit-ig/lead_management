@@ -14,6 +14,7 @@ import {
   Building,
   Mail,
   Phone,
+  MapPin,
   Calendar,
   Target,
   Star,
@@ -42,6 +43,7 @@ const LeadDetails: React.FC = () => {
     phone: '',
     company: '',
     position: '',
+    location: '',
     status: 'New' as LeadStatus,
     priority: 'Medium' as LeadPriority,
     source: 'Manual' as LeadSource
@@ -77,6 +79,7 @@ const LeadDetails: React.FC = () => {
           phone: response.data.phone,
           company: response.data.company,
           position: response.data.position,
+          location: response.data.location,
           status: response.data.status,
           priority: response.data.priority,
           source: response.data.source
@@ -315,6 +318,16 @@ const LeadDetails: React.FC = () => {
                     />
                   </div>
                   <div className="form-group">
+                    <label className="form-label">Location</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={formData.location}
+                      onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                      placeholder="e.g., UK, USA, Germany"
+                    />
+                  </div>
+                  <div className="form-group">
                     <label className="form-label">Source</label>
                     <select
                       className="form-input"
@@ -369,6 +382,13 @@ const LeadDetails: React.FC = () => {
                       <div>
                         <p className="text-sm font-medium text-gray-500">Position</p>
                         <p className="text-gray-900">{lead.position}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <MapPin className="w-5 h-5 text-gray-400" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Location</p>
+                        <p className="text-gray-900">{lead.location || 'Not specified'}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">

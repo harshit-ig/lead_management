@@ -5,6 +5,7 @@ import {
   Phone,
   Mail,
   Building,
+  MapPin,
   Calendar,
   Edit,
   Plus,
@@ -21,6 +22,8 @@ const MyLeads: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<LeadStatus | ''>('');
+  const [locationFilter, setLocationFilter] = useState('');
+  const [availableLocations, setAvailableLocations] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [allStats, setAllStats] = useState<{ total: number; newLeads: number; inProgress: number; closed: number }>({ total: 0, newLeads: 0, inProgress: 0, closed: 0 });
@@ -33,7 +36,19 @@ const MyLeads: React.FC = () => {
   useEffect(() => {
     fetchMyLeads();
     fetchAllStats();
-  }, [currentPage, statusFilter]);
+    fetchDistinctLocations();
+  }, [currentPage, statusFilter, locationFilter]);
+
+  const fetchDistinctLocations = async () => {
+    try {
+      const response = await leadApi.getDistinctLocations();
+      if (response.success && response.data) {
+        setAvailableLocations(response.data);
+      }
+    } catch (error) {
+      // Ignore errors for location fetching
+    }
+  };
 
   const fetchAllStats = async () => {
     try {
@@ -55,9 +70,15 @@ const MyLeads: React.FC = () => {
       if (response.success) {
         let filteredLeads = response.data;
         
-        // Apply client-side filtering for status and search
+        // Apply client-side filtering for status, location, and search
         if (statusFilter) {
           filteredLeads = filteredLeads.filter(lead => lead.status === statusFilter);
+        }
+        
+        if (locationFilter) {
+          filteredLeads = filteredLeads.filter(lead => 
+            lead.location === locationFilter
+          );
         }
         
         if (searchQuery) {
@@ -66,7 +87,8 @@ const MyLeads: React.FC = () => {
             lead.name.toLowerCase().includes(query) ||
             lead.email.toLowerCase().includes(query) ||
             lead.company.toLowerCase().includes(query) ||
-            lead.phone.toLowerCase().includes(query)
+            lead.phone.toLowerCase().includes(query) ||
+            (lead.location && lead.location.toLowerCase().includes(query))
           );
         }
         
@@ -209,7 +231,7 @@ const MyLeads: React.FC = () => {
       {/* Search and Filter Bar */}
       <div className="card">
         <div className="card-body">
-          <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div className="md:col-span-2 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
@@ -229,6 +251,18 @@ const MyLeads: React.FC = () => {
                 <option value="">All Statuses</option>
                 {statusOptions.map(status => (
                   <option key={status} value={status}>{status}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <select
+                value={locationFilter}
+                onChange={(e) => setLocationFilter(e.target.value)}
+                className="form-input w-full"
+              >
+                <option value="">All Locations</option>
+                {availableLocations.map(location => (
+                  <option key={location} value={location}>{location}</option>
                 ))}
               </select>
             </div>
@@ -267,6 +301,14 @@ const MyLeads: React.FC = () => {
               <div className="flex items-center mb-3">
                 <Building className="w-4 h-4 text-gray-400 mr-2" />
                 <span className="text-sm text-gray-700">{lead.company}</span>
+              </div>
+
+              {/* Location Info */}
+              <div className="flex items-center mb-3">
+                <MapPin className="w-4 h-4 text-gray-400 mr-2" />
+                <span className="text-sm text-gray-700">
+                  {lead.location || 'Location not specified'}
+                </span>
               </div>
 
               {/* Contact Info */}
@@ -350,12 +392,12 @@ const MyLeads: React.FC = () => {
           <Target className="w-12 h-12 text-gray-300 mx-auto mb-3" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No leads assigned</h3>
           <p className="text-gray-500 mb-4">
-            {searchQuery || statusFilter
+            {searchQuery || statusFilter || locationFilter
               ? 'No leads match your search criteria'
               : 'You don\'t have any leads assigned yet'
             }
           </p>
-          {!searchQuery && !statusFilter && (
+          {!searchQuery && !statusFilter && !locationFilter && (
             <a href="/leads/new" className="btn btn-primary">
               <Plus className="w-4 h-4" />
               Create Your First Lead

@@ -33,6 +33,7 @@ export interface ILead extends Document {
   phone: string;
   company: string;
   position: string;
+  location: string;
   source: LeadSource;
   status: LeadStatus;
   priority: LeadPriority;
@@ -69,6 +70,7 @@ export interface CreateLeadInput {
   phone: string;
   company?: string;
   position?: string;
+  location?: string;
   source: LeadSource;
   priority: LeadPriority;
   notes?: string;
@@ -80,6 +82,7 @@ export interface UpdateLeadInput {
   phone?: string;
   company?: string;
   position?: string;
+  location?: string;
   source?: LeadSource;
   status?: LeadStatus;
   priority?: LeadPriority;
@@ -144,6 +147,11 @@ export interface DashboardStats {
     count: number;
     percentage: number;
   }>;
+  leadsByLocation: Array<{
+    location: string;
+    count: number;
+    percentage: number;
+  }>;
   lastUpdated: string;
 }
 
@@ -153,6 +161,7 @@ export interface LeadFilters {
   source?: LeadSource[];
   priority?: LeadPriority[];
   assignedTo?: string[];
+  location?: string[];
   dateRange?: {
     from: string;
     to: string;
@@ -183,6 +192,7 @@ export interface ExcelLeadRow {
   phone?: string;
   company?: string;
   position?: string;
+  location?: string;
   source?: string;
   priority?: string;
 }

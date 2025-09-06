@@ -11,6 +11,7 @@ import {
   Building,
   Briefcase,
   Globe,
+  MapPin,
   AlertTriangle,
   MessageSquare
 } from 'lucide-react';
@@ -25,6 +26,7 @@ const AddLead: React.FC = () => {
     phone: '',
     company: '',
     position: '',
+    location: '',
     source: 'Manual',
     priority: 'Medium',
     notes: ''
@@ -232,7 +234,7 @@ const AddLead: React.FC = () => {
                 )}
               </div>
 
-              <div className="form-group md:col-span-2">
+              <div className="form-group">
                 <label htmlFor="company" className="form-label">
                   Company Name
                 </label>
@@ -250,6 +252,27 @@ const AddLead: React.FC = () => {
                 </div>
                 {errors.company && (
                   <p className="form-error">{errors.company}</p>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="location" className="form-label">
+                  Location
+                </label>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type="text"
+                    id="location"
+                    name="location"
+                    value={formData.location}
+                    onChange={handleInputChange}
+                    className={`form-input pl-10 ${errors.location ? 'border-red-500' : ''}`}
+                    placeholder="e.g., UK, USA, Germany"
+                  />
+                </div>
+                {errors.location && (
+                  <p className="form-error">{errors.location}</p>
                 )}
               </div>
             </div>

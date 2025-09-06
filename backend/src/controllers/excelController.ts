@@ -479,6 +479,7 @@ export const importWithMapping = async (req: Request, res: Response): Promise<vo
       mappedData.status = 'New';
       mappedData.company = mappedData.company || '';
       mappedData.position = mappedData.position || '';
+      mappedData.location = mappedData.location || '';
 
       const validationResult: ImportValidationResult = {
         isValid: rowErrors.length === 0,
@@ -659,6 +660,13 @@ export const getLeadFields = async (_req: Request, res: Response): Promise<void>
         type: 'string', 
         required: false,
         description: 'Job title or position'
+      },
+      { 
+        name: 'location', 
+        label: 'Location', 
+        type: 'string', 
+        required: false,
+        description: 'Geographic location (e.g., UK, USA, Germany)'
       },
       { 
         name: 'source', 

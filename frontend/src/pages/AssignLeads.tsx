@@ -10,6 +10,7 @@ import {
   Building,
   Mail,
   Phone,
+  MapPin,
   AlertTriangle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -25,6 +26,8 @@ const AssignLeads: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<LeadStatus | ''>('');
   const [sourceFilter, setSourceFilter] = useState<LeadSource | ''>('');
+  const [locationFilter, setLocationFilter] = useState<string>('');
+  const [availableLocations, setAvailableLocations] = useState<string[]>([]);
   const [showUnassignedOnly, setShowUnassignedOnly] = useState(true);
   
   // Pagination state
@@ -54,7 +57,18 @@ const AssignLeads: React.FC = () => {
   }, [currentPage , showUnassignedOnly]);
 
   const fetchData = async () => {
-    await Promise.all([fetchLeads(), fetchUsers()]);
+    await Promise.all([fetchLeads(), fetchUsers(), fetchDistinctLocations()]);
+  };
+
+  const fetchDistinctLocations = async () => {
+    try {
+      const response = await leadApi.getDistinctLocations();
+      if (response.success && response.data) {
+        setAvailableLocations(response.data);
+      }
+    } catch (error) {
+      // Ignore errors for location fetching
+    }
   };
 
   const fetchLeads = async () => {
@@ -64,6 +78,7 @@ const AssignLeads: React.FC = () => {
       
       if (statusFilter) filters.status = [statusFilter];
       if (sourceFilter) filters.source = [sourceFilter];
+      if (locationFilter) filters.location = [locationFilter];
       if (searchQuery) filters.search = searchQuery;
       if (showUnassignedOnly) filters.assignedTo = [null];
 
@@ -267,7 +282,7 @@ const AssignLeads: React.FC = () => {
           <form onSubmit={(e) => {
             e.preventDefault();
             fetchLeads();
-          }} className="grid grid-cols-1 md:grid-cols-6 gap-4">
+          }} className="grid grid-cols-1 md:grid-cols-7 gap-4">
             <div className="md:col-span-2">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -308,6 +323,19 @@ const AssignLeads: React.FC = () => {
                 <option value="Referral">Referral</option>
                 <option value="Import">Import</option>
                 <option value="Cold Call">Cold Call</option>
+              </select>
+            </div>
+
+            <div>
+              <select
+                value={locationFilter}
+                onChange={(e) => setLocationFilter(e.target.value)}
+                className="form-input w-full"
+              >
+                <option value="">All Locations</option>
+                {availableLocations.map(location => (
+                  <option key={location} value={location}>{location}</option>
+                ))}
               </select>
             </div>
 
@@ -369,6 +397,7 @@ const AssignLeads: React.FC = () => {
                 <th className="whitespace-nowrap">Lead Details</th>
                 <th className="whitespace-nowrap">Contact Info</th>
                 <th className="whitespace-nowrap">Company</th>
+                <th className="whitespace-nowrap">Location</th>
                 <th className="whitespace-nowrap">Status</th>
                 <th className="whitespace-nowrap">Source</th>
                 <th className="whitespace-nowrap">Priority</th>
@@ -411,6 +440,14 @@ const AssignLeads: React.FC = () => {
                     <div className="flex items-center">
                       <Building className="w-4 h-4 text-gray-400 mr-2" />
                       {lead.company}
+                    </div>
+                  </td>
+                  <td className="whitespace-nowrap">
+                    <div className="flex items-center">
+                      <MapPin className="w-4 h-4 text-gray-400 mr-2" />
+                      <span className="text-sm text-gray-600">
+                        {lead.location || 'Not specified'}
+                      </span>
                     </div>
                   </td>
                   <td className="whitespace-nowrap">
@@ -514,6 +551,7 @@ const AssignLeads: React.FC = () => {
                   setSearchQuery('');
                   setStatusFilter('');
                   setSourceFilter('');
+                  setLocationFilter('');
                   setShowUnassignedOnly(false);
                   handleFilterChange();
                 }}

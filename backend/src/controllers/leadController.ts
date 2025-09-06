@@ -18,6 +18,7 @@ export const getLeads = async (req: Request, res: Response): Promise<void> => {
       source, 
       priority, 
       assignedTo, 
+      location, 
       search,
       dateRange
     } = req.query;
@@ -69,6 +70,34 @@ export const getLeads = async (req: Request, res: Response): Promise<void> => {
       } else {
         // Only looking for specific assignees
         filter.assignedTo = { $in: assignedToArray };
+      }
+    }
+    
+    if (location) {
+      const locationArray = Array.isArray(location) ? location : [location];
+      
+      // Check if filtering for empty locations
+      const hasEmptyFilter = locationArray.includes('') || locationArray.includes('null') || locationArray.includes('undefined');
+      const otherLocations = locationArray.filter(loc => loc !== '' && loc !== 'null' && loc !== 'undefined');
+      
+      if (hasEmptyFilter && otherLocations.length === 0) {
+        // Only looking for leads with empty location
+        filter.$or = [
+          { location: '' },
+          { location: { $exists: false } },
+          { location: null }
+        ];
+      } else if (hasEmptyFilter && otherLocations.length > 0) {
+        // Looking for both empty locations and specific locations
+        filter.$or = [
+          { location: '' },
+          { location: { $exists: false } },
+          { location: null },
+          { location: { $in: otherLocations } }
+        ];
+      } else {
+        // Only looking for specific locations
+        filter.location = { $in: locationArray };
       }
     }
     
@@ -345,7 +374,7 @@ export const updateLead = async (req: Request, res: Response): Promise<void> => 
     }
 
     // Update allowed fields
-    const allowedFields = ['name', 'email', 'phone', 'company', 'position', 'source', 'status', 'priority'];
+    const allowedFields = ['name', 'email', 'phone', 'company', 'position', 'location', 'source', 'status', 'priority'];
     allowedFields.forEach(field => {
       if (updateData[field as keyof UpdateLeadInput] !== undefined) {
         (lead as any)[field] = updateData[field as keyof UpdateLeadInput];
@@ -613,6 +642,42 @@ export const getMyLeads = async (req: Request, res: Response): Promise<void> => 
     });
   }
 };
+
+// Get distinct locations for filtering
+export const getDistinctLocations = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Build filter based on user role
+    const filter: any = {};
+    
+    // If user is not admin, only show locations from their assigned leads
+    if (req.user?.role !== 'admin') {
+      filter.assignedTo = req.user?.userId;
+    }
+
+    // Get distinct locations, excluding empty ones
+    const locations = await Lead.distinct('location', {
+      ...filter,
+      location: { $nin: ['', null], $exists: true }
+    });
+
+    // Sort locations alphabetically
+    locations.sort((a, b) => a.localeCompare(b));
+
+    res.status(200).json({
+      success: true,
+      message: 'Distinct locations retrieved successfully',
+      data: locations
+    });
+  } catch (error) {
+    console.error('Get distinct locations error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve distinct locations',
+      errors: [error instanceof Error ? error.message : 'Unknown error occurred']
+    });
+  }
+};
+
 // Get stats for all leads assigned to the current user (independent of filters or pagination)
 export const getMyLeadsStats = async (req: Request, res: Response): Promise<void> => {
   try {
